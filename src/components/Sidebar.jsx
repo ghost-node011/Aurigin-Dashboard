@@ -10,6 +10,7 @@ import {
   Network,
   BarChart3,
   LogOut,
+  X,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { Avatar } from "./Avatar";
@@ -27,7 +28,7 @@ const NAV_ITEMS = [
   { to: "/analytics", label: "Analytics", icon: BarChart3, roles: ["admin", "hr"] },
 ];
 
-export function Sidebar() {
+export function Sidebar({ open = false, onClose }) {
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -36,13 +37,26 @@ export function Sidebar() {
   const items = NAV_ITEMS.filter((item) => item.roles.includes(currentUser.role));
 
   return (
-    <aside className="flex h-screen w-64 shrink-0 flex-col border-r border-border bg-surface">
+    <aside
+      className={cn(
+        "fixed inset-y-0 left-0 z-40 flex h-screen w-64 shrink-0 flex-col border-r border-border bg-surface transition-transform duration-200 md:static md:translate-x-0",
+        open ? "translate-x-0" : "-translate-x-full",
+      )}
+    >
       <div className="flex items-center gap-2.5 px-5 py-5">
         <img src="/logo.png" alt="" className="h-8 w-8 rounded-md object-cover" />
-        <div>
+        <div className="min-w-0 flex-1">
           <p className="font-display text-base font-semibold leading-tight">Aurigin People</p>
           <p className="text-[11px] text-muted-foreground">HR Portal</p>
         </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-surface-muted hover:text-foreground md:hidden"
+          aria-label="Close menu"
+        >
+          <X className="h-4 w-4" />
+        </button>
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-3">
@@ -51,6 +65,7 @@ export function Sidebar() {
             key={item.to}
             to={item.to}
             end={item.to === "/"}
+            onClick={onClose}
             className={({ isActive }) =>
               cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition",
