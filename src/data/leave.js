@@ -43,36 +43,19 @@ function request(id, employeeId, type, startOffset, endOffset, status, reason, a
 }
 
 export const LEAVE_REQUESTS = [
-  request("lr-1", "aarav-joshi", "casual", 5, 6, "Pending", "Family function back home", "rohan-mehta"),
-  request("lr-2", "sara-iyer", "sick", 1, 1, "Pending", "Fever, resting at home", "rohan-mehta"),
+  request("lr-1", "gaurank-sharma", "casual", 5, 6, "Pending", "Family function back home", "udit"),
+  request("lr-2", "avantika", "sick", 1, 1, "Pending", "Fever, resting at home", "arjun"),
   request(
     "lr-3",
-    "karan-verma",
+    "aurigin-media-hr",
     "earned",
     -10,
     -8,
     "Approved",
-    "Family trip to Goa",
-    "rohan-mehta",
+    "Family trip",
+    "arjun",
     "Enjoy the trip!",
   ),
-  request(
-    "lr-4",
-    "priya-nair",
-    "casual",
-    -15,
-    -15,
-    "Rejected",
-    "Personal work",
-    "rohan-mehta",
-    "Clashes with release week — please reschedule if possible.",
-  ),
-  request("lr-5", "ishaan-kulkarni", "casual", 8, 9, "Pending", "Sister's engagement ceremony", "ananya-bose"),
-  request("lr-6", "divya-menon", "sick", -5, -4, "Approved", "Recovering from viral fever", "arjun-malhotra"),
-  request("lr-7", "rahul-chawla", "earned", 20, 23, "Pending", "Wedding — traveling to Jaipur", "zoya-sheikh"),
-  request("lr-8", "neha-kapoor", "casual", -2, -2, "Approved", "Personal errand", "aditi-rao"),
-  request("lr-9", "kabir-khanna", "sick", -20, -19, "Approved", "Food poisoning", "arjun-malhotra"),
-  request("lr-10", "simran-kaur", "casual", 12, 12, "Pending", "Local holiday travel", "zoya-sheikh"),
 ];
 
 export function getLeaveRequestsFor(employeeId) {

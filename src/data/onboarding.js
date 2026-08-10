@@ -25,18 +25,7 @@ export function createOnboardingPlan(employeeId) {
   }));
 }
 
-/** Seed-only: same as createOnboardingPlan but with the first `doneCount` tasks pre-completed, for demo data. */
-function seedPlan(employeeId, doneCount) {
-  return createOnboardingPlan(employeeId).map((task, i) => ({
-    ...task,
-    status: i < doneCount ? "Done" : i === doneCount ? "In Progress" : "Pending",
-  }));
-}
-
-export const SEED_ONBOARDING_PLANS = {
-  "tanvi-desai": seedPlan("tanvi-desai", 9),
-  "devika-rane": seedPlan("devika-rane", 4),
-};
+export const SEED_ONBOARDING_PLANS = {};
 
 export function computeOnboardingProgress(plan) {
   if (!plan || plan.length === 0) return 0;

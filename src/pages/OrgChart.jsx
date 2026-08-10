@@ -7,15 +7,17 @@ import { Badge } from "../components/Badge";
 
 export default function OrgChart() {
   const { employees, getDirectReports } = useHRData();
-  const root = employees.find((e) => e.managerId === null);
+  const roots = employees.filter((e) => e.managerId === null);
 
   return (
     <div>
       <h1 className="font-display text-3xl font-semibold">Org Chart</h1>
       <p className="mt-1 text-sm text-muted-foreground">Who reports to whom, at a glance.</p>
 
-      <div className="mt-8 rounded-2xl border border-border bg-surface p-6">
-        {root && <OrgNode employee={root} depth={0} getDirectReports={getDirectReports} />}
+      <div className="mt-8 space-y-6 rounded-2xl border border-border bg-surface p-6">
+        {roots.map((root) => (
+          <OrgNode key={root.id} employee={root} depth={0} getDirectReports={getDirectReports} />
+        ))}
       </div>
     </div>
   );

@@ -13,7 +13,7 @@ import { KUDOS } from "../data/kudos";
 import { ANNOUNCEMENTS } from "../data/announcements";
 import { daysBetweenInclusive, todayISO, nowTime } from "../lib/date";
 
-const STORAGE_KEY = "aurigin-hr.data";
+const STORAGE_KEY = "aurigin-hr.data.v2";
 
 function defaultState() {
   return {

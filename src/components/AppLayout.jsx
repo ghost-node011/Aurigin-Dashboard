@@ -9,7 +9,7 @@ export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex h-screen overflow-hidden bg-background">
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-30 bg-black/40 md:hidden"
@@ -18,8 +18,8 @@ export function AppLayout() {
         />
       )}
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="min-w-0 flex-1">
-        <header className="flex h-16 items-center justify-between gap-3 border-b border-border bg-surface px-4 sm:px-8">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-border bg-surface px-4 sm:px-8">
           <div className="flex min-w-0 items-center gap-2">
             <button
               type="button"
@@ -45,8 +45,10 @@ export function AppLayout() {
             </button>
           </div>
         </header>
-        <main className="mx-auto max-w-6xl px-4 py-6 sm:px-8 sm:py-8">
-          <Outlet />
+        <main className="flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-6xl px-4 py-6 sm:px-8 sm:py-8">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>
