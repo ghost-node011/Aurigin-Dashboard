@@ -13,7 +13,7 @@ import { Field, Input, Select } from "../components/Input";
 import { todayISO } from "../lib/date";
 import { cn } from "../lib/cn";
 
-const CATEGORIES = ["Documentation", "IT Setup", "Training", "Culture"];
+const CATEGORIES = ["Welcome", "Documentation", "IT Setup", "Training", "Culture"];
 const NEXT_STATUS = { Pending: "In Progress", "In Progress": "Done", Done: "Pending" };
 const EMPLOYMENT_TYPES = ["Full-time", "Part-time", "Contract"];
 
@@ -56,6 +56,12 @@ export default function Onboarding() {
               <p className="mt-0.5 flex items-center gap-1.5 text-sm text-primary">
                 <Mail className="h-3.5 w-3.5" /> {justCreated.email}
               </p>
+              {justCreated.tempPassword && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Temporary password (share this with them, shown only once):{" "}
+                  <span className="rounded bg-surface px-1.5 py-0.5 font-mono text-foreground">{justCreated.tempPassword}</span>
+                </p>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -130,10 +136,10 @@ export default function Onboarding() {
         open={addOpen}
         onClose={() => setAddOpen(false)}
         employees={data.employees}
-        onSubmit={(input) => {
-          const created = data.addEmployee(input);
-          setJustCreated(created);
+        onSubmit={async (input) => {
           setAddOpen(false);
+          const created = await data.addEmployee(input);
+          setJustCreated(created);
         }}
       />
     </div>

@@ -1,33 +1,57 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { useHRData } from "./HRDataContext";
-
-const STORAGE_KEY = "aurigin-hr.currentUserId";
+import { api, TOKEN_KEY } from "../lib/api";
 
 const AuthContext = createContext(null);
 
-// Mounted inside HRDataProvider so "who am I" resolves against the live,
-// mutable employee list (HR can add new hires who then need to log in).
+// Owns the JWT and resolves "who am I" by calling the API directly — this
+// runs above HRDataProvider (see App.jsx) so the token exists before
+// HRDataProvider tries to fetch anything that needs it.
 export function AuthProvider({ children }) {
-  const { getEmployee } = useHRData();
-  const [currentUserId, setCurrentUserId] = useState(() => localStorage.getItem(STORAGE_KEY));
+  const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY));
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
-    if (currentUserId) localStorage.setItem(STORAGE_KEY, currentUserId);
-    else localStorage.removeItem(STORAGE_KEY);
-  }, [currentUserId]);
+    if (!token) {
+      setCurrentUser(null);
+      setAuthLoading(false);
+      return;
+    }
+    setAuthLoading(true);
+    api
+      .me()
+      .then(setCurrentUser)
+      .catch(() => {
+        localStorage.removeItem(TOKEN_KEY);
+        setToken(null);
+        setCurrentUser(null);
+      })
+      .finally(() => setAuthLoading(false));
+  }, [token]);
 
-  const currentUser = currentUserId ? getEmployee(currentUserId) : null;
-
-  function login(employeeId) {
-    setCurrentUserId(employeeId);
+  async function login(email, password) {
+    const { token: newToken, employee } = await api.login(email, password);
+    localStorage.setItem(TOKEN_KEY, newToken);
+    setToken(newToken);
+    setCurrentUser(employee);
   }
 
   function logout() {
-    setCurrentUserId(null);
+    localStorage.removeItem(TOKEN_KEY);
+    setToken(null);
+    setCurrentUser(null);
+  }
+
+  async function refreshCurrentUser() {
+    const employee = await api.me();
+    setCurrentUser(employee);
+    return employee;
   }
 
   return (
-    <AuthContext.Provider value={{ currentUser, login, logout }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ currentUser, authLoading, login, logout, refreshCurrentUser }}>
+      {children}
+    </AuthContext.Provider>
   );
 }
 

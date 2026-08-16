@@ -17,8 +17,8 @@ import Analytics from "./pages/Analytics";
 
 export default function App() {
   return (
-    <HRDataProvider>
-      <AuthProvider>
+    <AuthProvider>
+      <HRDataProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route element={<RequireAuth />}>
@@ -38,7 +38,7 @@ export default function App() {
             </Route>
           </Route>
         </Routes>
-      </AuthProvider>
-    </HRDataProvider>
+      </HRDataProvider>
+    </AuthProvider>
   );
 }

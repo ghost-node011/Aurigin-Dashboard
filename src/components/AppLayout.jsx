@@ -3,10 +3,24 @@ import { Outlet } from "react-router-dom";
 import { Bell, Menu } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { ThemeToggle } from "./ThemeToggle";
+import { WelcomeFlow } from "./onboarding/WelcomeFlow";
+import { useAuth } from "../context/AuthContext";
+import { useHRData } from "../context/HRDataContext";
+import { WELCOME_MEET_TEAM_TITLE, WELCOME_POLICIES_TITLE } from "../data/onboarding";
 import { formatDate } from "../lib/date";
 
 export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { currentUser } = useAuth();
+  const data = useHRData();
+
+  if (currentUser.status === "Onboarding") {
+    const plan = data.onboardingPlans[currentUser.id];
+    const welcomeDone = plan?.every(
+      (t) => ![WELCOME_MEET_TEAM_TITLE, WELCOME_POLICIES_TITLE].includes(t.title) || t.status === "Done",
+    );
+    if (plan && !welcomeDone) return <WelcomeFlow employee={currentUser} />;
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">

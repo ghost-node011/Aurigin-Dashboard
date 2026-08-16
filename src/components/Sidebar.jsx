@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -10,10 +11,12 @@ import {
   Network,
   BarChart3,
   LogOut,
+  KeyRound,
   X,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { Avatar } from "./Avatar";
+import { ChangePasswordModal } from "./ChangePasswordModal";
 import { cn } from "../lib/cn";
 
 const NAV_ITEMS = [
@@ -21,7 +24,14 @@ const NAV_ITEMS = [
   { to: "/directory", label: "Directory", icon: Users, roles: ["admin", "hr", "manager", "employee"] },
   { to: "/attendance", label: "Attendance", icon: CalendarClock, roles: ["admin", "hr", "manager", "employee"] },
   { to: "/leave", label: "Leave", icon: CalendarDays, roles: ["admin", "hr", "manager", "employee"] },
-  { to: "/onboarding", label: "Onboarding", icon: ClipboardList, roles: ["admin", "hr", "manager", "employee"] },
+  {
+    to: "/onboarding",
+    label: "Onboarding",
+    icon: ClipboardList,
+    // HR/admin manage onboarding for everyone; anyone else only sees this
+    // while they themselves have an active checklist to work through.
+    visible: (user) => ["admin", "hr"].includes(user.role) || user.status === "Onboarding",
+  },
   { to: "/recognition", label: "Recognition", icon: Award, roles: ["admin", "hr", "manager", "employee"] },
   { to: "/announcements", label: "Announcements", icon: Megaphone, roles: ["admin", "hr", "manager", "employee"] },
   { to: "/org-chart", label: "Org Chart", icon: Network, roles: ["admin", "hr", "manager", "employee"] },
@@ -29,12 +39,15 @@ const NAV_ITEMS = [
 ];
 
 export function Sidebar({ open = false, onClose }) {
-  const { currentUser, logout } = useAuth();
+  const { currentUser, logout, refreshCurrentUser } = useAuth();
   const navigate = useNavigate();
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
   if (!currentUser) return null;
 
-  const items = NAV_ITEMS.filter((item) => item.roles.includes(currentUser.role));
+  const items = NAV_ITEMS.filter((item) =>
+    item.visible ? item.visible(currentUser) : item.roles.includes(currentUser.role),
+  );
 
   return (
     <aside
@@ -90,18 +103,36 @@ export function Sidebar({ open = false, onClose }) {
           </div>
           <button
             type="button"
+            onClick={() => setChangePasswordOpen(true)}
+            className="relative grid h-8 w-8 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-surface-muted hover:text-foreground"
+            aria-label="Change password"
+            title={currentUser.mustChangePassword ? "Change your temporary password" : "Change password"}
+          >
+            <KeyRound className="h-4 w-4" />
+            {currentUser.mustChangePassword && (
+              <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-danger" />
+            )}
+          </button>
+          <button
+            type="button"
             onClick={() => {
               logout();
               navigate("/login");
             }}
             className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-surface-muted hover:text-foreground"
-            aria-label="Switch user / log out"
-            title="Switch user / log out"
+            aria-label="Log out"
+            title="Log out"
           >
             <LogOut className="h-4 w-4" />
           </button>
         </div>
       </div>
+
+      <ChangePasswordModal
+        open={changePasswordOpen}
+        onClose={() => setChangePasswordOpen(false)}
+        onChanged={refreshCurrentUser}
+      />
     </aside>
   );
 }

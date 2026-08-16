@@ -27,11 +27,15 @@ export default function Dashboard() {
   const reports = data.getAllReports(currentUser.id);
   const isPeopleManager = ["manager", "hr", "admin"].includes(currentUser.role) && reports.length > 0;
 
-  const pendingApprovals = data.leaveRequests.filter((r) => {
-    if (r.status !== "Pending") return false;
-    if (currentUser.role === "hr" || currentUser.role === "admin") return true;
-    return r.approverId === currentUser.id;
-  });
+  const isOrgWideApprover = currentUser.role === "hr" || currentUser.role === "admin";
+  const pendingApprovals = [
+    ...data.leaveRequests
+      .filter((r) => r.status === "Pending" && (isOrgWideApprover || r.approverId === currentUser.id))
+      .map((r) => ({ ...r, kind: "leave" })),
+    ...data.wfhRequests
+      .filter((r) => r.status === "Pending" && (isOrgWideApprover || r.approverId === currentUser.id))
+      .map((r) => ({ ...r, kind: "wfh" })),
+  ].sort((a, b) => a.appliedOn.localeCompare(b.appliedOn));
 
   const recentAnnouncements = [...data.announcements]
     .sort((a, b) => (b.pinned - a.pinned) || b.date.localeCompare(a.date))
@@ -83,7 +87,12 @@ export default function Dashboard() {
               ) : (
                 <div className="space-y-3">
                   {pendingApprovals.slice(0, 4).map((req) => (
-                    <ApprovalRow key={req.id} request={req} getEmployee={data.getEmployee} onDecide={data.decideLeave} />
+                    <ApprovalRow
+                      key={req.id}
+                      request={req}
+                      getEmployee={data.getEmployee}
+                      onDecide={req.kind === "wfh" ? data.decideWfh : data.decideLeave}
+                    />
                   ))}
                 </div>
               )}
@@ -217,16 +226,19 @@ function OnboardingProgressBar({ plan, compact }) {
 
 function ApprovalRow({ request, getEmployee, onDecide }) {
   const employee = getEmployee(request.employeeId);
-  const type = LEAVE_TYPES.find((t) => t.id === request.type);
+  const isWfh = request.kind === "wfh";
+  const type = isWfh ? null : LEAVE_TYPES.find((t) => t.id === request.type);
   return (
     <div className="flex items-center gap-3">
       <Avatar employee={employee} size="sm" />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm">
-          <span className="font-medium">{employee.name}</span> · {type.name}
+          <span className="font-medium">{employee.name}</span> · {isWfh ? "Work from home" : type.name}
         </p>
         <p className="text-xs text-muted-foreground">
-          {formatMonthDay(request.startDate)} – {formatMonthDay(request.endDate)} · {request.days}d
+          {isWfh
+            ? formatMonthDay(request.date)
+            : `${formatMonthDay(request.startDate)} – ${formatMonthDay(request.endDate)} · ${request.days}d`}
         </p>
       </div>
       <div className="flex shrink-0 gap-1.5">
