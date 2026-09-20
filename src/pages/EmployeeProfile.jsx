@@ -9,6 +9,7 @@ import { formatDate } from "../lib/date";
 import { Avatar } from "../components/Avatar";
 import { Badge } from "../components/Badge";
 import { Card } from "../components/Card";
+import { ProbationCard } from "../components/ProbationCard";
 
 function tenure(dateOfJoining) {
   const months = Math.max(
@@ -57,6 +58,7 @@ export default function EmployeeProfile() {
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="font-display text-2xl font-semibold">{employee.name}</h1>
             <Badge>{employee.status}</Badge>
+            {employee.employmentStatus === "Probation" && <Badge>On probation</Badge>}
           </div>
           <p className="mt-1 text-muted-foreground">{employee.title}</p>
           <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-muted-foreground">
@@ -135,6 +137,10 @@ export default function EmployeeProfile() {
         </div>
 
         <div className="space-y-6">
+          {canViewSensitive && (
+            <ProbationCard employee={employee} canManage={["admin", "hr"].includes(currentUser.role)} />
+          )}
+
           {canViewSensitive && (
             <Card title="Leave balance">
               <div className="space-y-3">

@@ -3,7 +3,15 @@ import { Home, Plus } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useHRData } from "../context/HRDataContext";
 import { todayISO, formatDate, formatMonthDay, getWeekRange, tomorrowISO } from "../lib/date";
-import { WFH_WEEKLY_QUOTA, getWeeklyWfhDates } from "../data/wfh";
+import { WFH_WEEKLY_QUOTA, WFH_PROBATION_MONTHLY_QUOTA, getWeeklyWfhDates, getMonthlyWfhDates, isOnProbation } from "../data/wfh";
+import {
+  CHECK_IN_BY_LABEL,
+  CHECK_OUT_FROM_LABEL,
+  EMERGENCY_EXCEPTIONS_PER_MONTH,
+  emergenciesUsedInMonth,
+  isNonCompliant,
+  punctualityLabel,
+} from "../data/attendance";
 import { Card } from "../components/Card";
 import { Badge } from "../components/Badge";
 import { Avatar } from "../components/Avatar";
@@ -11,6 +19,7 @@ import { Button } from "../components/Button";
 import { Modal } from "../components/Modal";
 import { Field, Input, Textarea } from "../components/Input";
 import { AttendanceWidget } from "../components/AttendanceWidget";
+import { cn } from "../lib/cn";
 
 const SUMMARY_STATUSES = ["Present", "WFH", "Half Day", "Absent", "Leave"];
 
@@ -49,6 +58,17 @@ export default function Attendance() {
     .sort((a, b) => a.appliedOn.localeCompare(b.appliedOn));
 
   const [wfhApplyOpen, setWfhApplyOpen] = useState(false);
+  const [emergencyOpen, setEmergencyOpen] = useState(false);
+
+  // Working hours are check-in by 11:00 and check-out from 18:00, with a
+  // small monthly allowance for genuine emergencies.
+  const emergenciesUsed = emergenciesUsedInMonth(data.attendanceRecords, currentUser.id, today);
+  const emergenciesLeft = Math.max(0, EMERGENCY_EXCEPTIONS_PER_MONTH - emergenciesUsed);
+  const todayNeedsExcuse = isNonCompliant(myTodayRecord);
+
+  // On probation the WFH allowance is monthly, not weekly.
+  const onProbation = isOnProbation(currentUser);
+  const wfhMonthlyUsed = getMonthlyWfhDates(data.wfhRequests, data.attendanceRecords, currentUser.id, today).size;
 
   return (
     <div className="space-y-6">
@@ -64,6 +84,36 @@ export default function Attendance() {
           onCheckOut={() => data.checkOut(currentUser.id)}
           onWFH={() => data.markWFH(currentUser.id)}
         />
+
+        <div className="mt-4 border-t border-border pt-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">
+                Check in by {CHECK_IN_BY_LABEL} · check out from {CHECK_OUT_FROM_LABEL}
+              </p>
+              <p className="mt-1 text-sm">
+                {punctualityLabel(myTodayRecord) ?? (myTodayRecord ? "Within working hours." : "Not checked in yet.")}
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-3">
+              <p className="text-xs text-muted-foreground">
+                {emergenciesLeft} of {EMERGENCY_EXCEPTIONS_PER_MONTH} emergency exceptions left this month
+              </p>
+              {todayNeedsExcuse && (
+                <Button size="sm" variant="outline" onClick={() => setEmergencyOpen(true)} disabled={emergenciesLeft === 0}>
+                  Mark as emergency
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {onProbation && (
+            <p className="mt-3 rounded-lg bg-warning-soft px-3 py-2 text-xs">
+              You're on probation — work from home is limited to {WFH_PROBATION_MONTHLY_QUOTA} day(s) per month
+              ({wfhMonthlyUsed} used), and leave can be availed after confirmation.
+            </p>
+          )}
+        </div>
       </Card>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
@@ -82,6 +132,11 @@ export default function Attendance() {
               <span className="w-32 shrink-0 text-muted-foreground">{formatDate(r.date, { weekday: "short", month: "short", day: "numeric" })}</span>
               <span className="flex-1 text-muted-foreground">{r.checkIn ? `${r.checkIn} – ${r.checkOut ?? "…"}` : "—"}</span>
               <span className="w-16 shrink-0 text-right text-muted-foreground">{r.hours ? `${r.hours}h` : ""}</span>
+              {punctualityLabel(r) && (
+                <span className={cn("mr-2 shrink-0 text-xs", r.emergency ? "text-muted-foreground" : "text-danger")}>
+                  {punctualityLabel(r)}
+                </span>
+              )}
               <Badge>{r.status}</Badge>
             </div>
           ))}
@@ -193,6 +248,16 @@ export default function Attendance() {
         </Card>
       )}
 
+      <EmergencyModal
+        open={emergencyOpen}
+        onClose={() => setEmergencyOpen(false)}
+        left={emergenciesLeft}
+        onSubmit={async (reason) => {
+          await data.claimEmergency(currentUser.id, today, reason);
+          setEmergencyOpen(false);
+        }}
+      />
+
       <ApplyWfhModal
         open={wfhApplyOpen}
         onClose={() => setWfhApplyOpen(false)}
@@ -234,6 +299,46 @@ function ApplyWfhModal({ open, onClose, employeeId, onSubmit }) {
           Submit request
         </Button>
       </form>
+    </Modal>
+  );
+}
+
+/**
+ * Claims one of the month's emergency exceptions for today, excusing a
+ * late check-in or an early check-out.
+ */
+function EmergencyModal({ open, onClose, left, onSubmit }) {
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  async function submit() {
+    setBusy(true);
+    setError(null);
+    try {
+      await onSubmit(reason.trim());
+      setReason("");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title="Mark today as an emergency">
+      <p className="text-sm text-muted-foreground">
+        This excuses today's late check-in or early check-out. You have {left} of{" "}
+        {EMERGENCY_EXCEPTIONS_PER_MONTH} exceptions left this month.
+      </p>
+      <Field label="Reason" className="mt-4">
+        <Textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="What happened?" />
+      </Field>
+      {error && <p className="mt-2 text-xs text-danger">{error}</p>}
+      <div className="mt-5 flex justify-end gap-2">
+        <Button variant="outline" onClick={onClose}>Cancel</Button>
+        <Button onClick={submit} disabled={busy}>Mark as emergency</Button>
+      </div>
     </Modal>
   );
 }

@@ -1,8 +1,13 @@
-import { useState } from "react";
-import { PartyPopper, Users, ShieldCheck, ChevronRight, ChevronLeft, Check } from "lucide-react";
+import { lazy, Suspense, useCallback, useState } from "react";
+import { PartyPopper, Users, ShieldCheck, ChevronRight, Check } from "lucide-react";
 import { useHRData } from "../../context/HRDataContext";
-import { POLICIES } from "../../data/policies";
+import { HANDBOOK, HANDBOOK_SECTIONS, ACKNOWLEDGEMENT_TEXT, handbookUrl } from "../../data/policies";
 import { WELCOME_MEET_TEAM_TITLE, WELCOME_POLICIES_TITLE } from "../../data/onboarding";
+// PDF.js is ~1.3MB of worker plus renderer and is only needed on this one
+// onboarding step, so it loads on demand rather than in the main bundle.
+const HandbookViewer = lazy(() =>
+  import("../HandbookViewer").then((m) => ({ default: m.HandbookViewer })),
+);
 import { Avatar } from "../Avatar";
 import { Button } from "../Button";
 import { cn } from "../../lib/cn";
@@ -164,101 +169,101 @@ function TeamGroup({ label, people }) {
 }
 
 function PoliciesStep({ onNext }) {
-  const [policyIndex, setPolicyIndex] = useState(0);
-  const [pageIndex, setPageIndex] = useState(0);
-  const [acked, setAcked] = useState(() => new Set());
+  // The handbook is the document people actually sign, so it's shown as
+  // the PDF itself rather than re-typed into the app. Acknowledgement
+  // unlocks only once the reader has scrolled to the final page — see
+  // HandbookViewer for why that needs a real renderer and not an iframe.
+  const [reachedEnd, setReachedEnd] = useState(false);
+  const [agreed, setAgreed] = useState(false);
+  const [jumpToPage, setJumpToPage] = useState(null);
 
-  const policy = POLICIES[policyIndex];
-  const page = policy.pages[pageIndex];
-  const pageKey = `${policyIndex}:${pageIndex}`;
-  const isPageAcked = acked.has(pageKey);
-  const isFirstPageOverall = policyIndex === 0 && pageIndex === 0;
-  const isLastPageOfPolicy = pageIndex === policy.pages.length - 1;
-  const isLastPolicy = policyIndex === POLICIES.length - 1;
-
-  function toggleAck() {
-    setAcked((s) => {
-      const next = new Set(s);
-      if (next.has(pageKey)) next.delete(pageKey);
-      else next.add(pageKey);
-      return next;
-    });
-  }
-
-  function goPrevPage() {
-    if (pageIndex > 0) {
-      setPageIndex((i) => i - 1);
-    } else if (policyIndex > 0) {
-      setPolicyIndex((i) => i - 1);
-      setPageIndex(POLICIES[policyIndex - 1].pages.length - 1);
-    }
-  }
-
-  function goNextPage() {
-    if (!isPageAcked) return;
-    if (!isLastPageOfPolicy) {
-      setPageIndex((i) => i + 1);
-    } else if (!isLastPolicy) {
-      setPolicyIndex((i) => i + 1);
-      setPageIndex(0);
-    } else {
-      onNext();
-    }
-  }
+  const onReachedEnd = useCallback(() => setReachedEnd(true), []);
 
   return (
     <div className="flex flex-1 flex-col">
       <div className="text-center">
         <ShieldCheck className="mx-auto h-8 w-8 text-primary" />
         <h2 className="mt-3 font-display text-2xl font-semibold">Company policies</h2>
-        <p className="mt-1 text-sm text-muted-foreground">Please read and acknowledge each page before continuing.</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Read the {HANDBOOK.title} to the end, then acknowledge it below.
+        </p>
       </div>
 
-      <div className="mt-8 grid flex-1 gap-4 md:grid-cols-[180px_1fr]">
-        <div className="flex gap-2 overflow-x-auto pb-1 md:flex-col md:overflow-visible md:pb-0">
-          {POLICIES.map((p, i) => {
-            const ackedCount = p.pages.filter((_, pi) => acked.has(`${i}:${pi}`)).length;
-            const complete = ackedCount === p.pages.length;
-            return (
-              <div
-                key={p.id}
-                className={cn(
-                  "shrink-0 rounded-lg border px-3 py-2.5 text-xs",
-                  i === policyIndex ? "border-primary bg-primary-soft text-primary" : "border-border text-muted-foreground",
-                )}
-              >
-                <div className="flex items-center gap-1.5 font-medium">
-                  {complete && <Check className="h-3 w-3 shrink-0 text-success" />}
-                  <span className="truncate">{p.title}</span>
-                </div>
-              </div>
-            );
-          })}
+      <div className="mt-6 grid flex-1 gap-4 md:grid-cols-[210px_1fr]">
+        <div className="flex max-h-[30rem] flex-col gap-1 overflow-y-auto pr-1">
+          <p className="px-1 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Jump to section
+          </p>
+          {HANDBOOK_SECTIONS.map((sec) => (
+            <button
+              key={sec.n}
+              type="button"
+              onClick={() => setJumpToPage(sec.page)}
+              className="rounded-lg px-2.5 py-2 text-left text-xs text-muted-foreground transition hover:bg-muted"
+            >
+              <span className="tabular-nums opacity-60">{sec.n}.</span> {sec.title}
+            </button>
+          ))}
         </div>
 
-        <div className="flex flex-col rounded-2xl border border-border bg-surface p-6">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            {policy.title} · Page {pageIndex + 1} of {policy.pages.length}
-          </p>
-          <h3 className="mt-2 font-display text-lg font-semibold">{page.heading}</h3>
-          <p className="mt-3 flex-1 text-sm leading-relaxed text-muted-foreground">{page.body}</p>
+        <div className="flex min-w-0 flex-col rounded-2xl border border-border bg-surface p-4">
+          <div className="flex items-center justify-between gap-3 pb-3">
+            <p className="truncate text-xs text-muted-foreground">
+              {HANDBOOK.version} · {HANDBOOK.pageCount} pages
+            </p>
+            <a
+              href={handbookUrl()}
+              target="_blank"
+              rel="noreferrer"
+              className="shrink-0 text-xs font-medium text-primary hover:underline"
+            >
+              Download
+            </a>
+          </div>
 
-          <label className="mt-6 flex cursor-pointer items-start gap-2.5 rounded-lg border border-border p-3 text-sm">
+          <Suspense
+            fallback={
+              <div className="flex h-[26rem] items-center justify-center rounded-lg border border-border bg-muted">
+                <p className="text-sm text-muted-foreground">Loading the handbook…</p>
+              </div>
+            }
+          >
+            <HandbookViewer
+              file={HANDBOOK.file}
+              jumpToPage={jumpToPage}
+              onReachedEnd={onReachedEnd}
+              className="h-[26rem] overflow-y-auto rounded-lg border border-border bg-muted"
+            />
+          </Suspense>
+
+          <label
+            className={cn(
+              "mt-4 flex items-start gap-2.5 rounded-lg border p-3 text-sm transition",
+              reachedEnd ? "cursor-pointer border-border" : "cursor-not-allowed border-border opacity-60",
+            )}
+          >
             <input
               type="checkbox"
-              checked={isPageAcked}
-              onChange={toggleAck}
+              checked={agreed}
+              disabled={!reachedEnd}
+              onChange={(e) => setAgreed(e.target.checked)}
               className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
             />
-            I have read and understood this page.
+            {ACKNOWLEDGEMENT_TEXT}
           </label>
 
-          <div className="mt-6 flex items-center justify-between">
-            <Button variant="outline" onClick={goPrevPage} disabled={isFirstPageOverall}>
-              <ChevronLeft className="h-4 w-4" /> Back
-            </Button>
-            <Button onClick={goNextPage} disabled={!isPageAcked}>
-              {isLastPageOfPolicy && isLastPolicy ? "Finish" : "Next"} <ChevronRight className="h-4 w-4" />
+          <div className="mt-4 flex items-center justify-between gap-3">
+            <p className="text-xs text-muted-foreground">
+              {reachedEnd ? (
+                <span className="inline-flex items-center gap-1 text-success">
+                  <Check className="h-3.5 w-3.5" /> You've reached the end of the handbook.
+                </span>
+              ) : (
+                `Scroll to page ${HANDBOOK.pageCount} to enable acknowledgement.`
+              )}
+            </p>
+            <Button onClick={onNext} disabled={!agreed}>
+              Acknowledge &amp; continue <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
         </div>

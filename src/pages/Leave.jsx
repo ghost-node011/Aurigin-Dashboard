@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useHRData } from "../context/HRDataContext";
-import { LEAVE_TYPES } from "../data/leave";
+import { LEAVE_TYPES, LEAVE_YEAR_LABEL, formatDays } from "../data/leave";
+import { isOnProbation } from "../data/wfh";
 import { daysBetweenInclusive, formatMonthDay, todayISO } from "../lib/date";
 import { Card } from "../components/Card";
 import { Badge } from "../components/Badge";
@@ -26,6 +27,10 @@ export default function Leave() {
     .sort((a, b) => b.appliedOn.localeCompare(a.appliedOn));
 
   const balances = data.leaveBalances[currentUser.id];
+  // Handbook §6.4 — leave accrues during probation but is availed only
+  // after confirmation. The backend refuses it either way; disabling the
+  // button here just avoids offering an action that can't succeed.
+  const onProbation = isOnProbation(currentUser);
 
   return (
     <div className="space-y-6">
@@ -34,10 +39,20 @@ export default function Leave() {
           <h1 className="font-display text-3xl font-semibold">Leave</h1>
           <p className="mt-1 text-sm text-muted-foreground">Apply for time off and track your balance.</p>
         </div>
-        <Button onClick={() => setApplyOpen(true)}>
+        <Button onClick={() => setApplyOpen(true)} disabled={onProbation}>
           <Plus className="h-4 w-4" /> Apply for leave
         </Button>
       </div>
+
+      {onProbation && (
+        <div className="rounded-xl border border-warning/30 bg-warning-soft px-4 py-3 text-sm">
+          <p className="font-medium">You're on probation until {currentUser.probationEndDate ?? "confirmation"}.</p>
+          <p className="mt-0.5 text-muted-foreground">
+            Leave keeps accruing in the meantime, but can be availed after your probation is successfully
+            completed (Employee Handbook §6.4).
+          </p>
+        </div>
+      )}
 
       {canApprove && (
         <div className="flex gap-1 rounded-lg border border-border bg-surface p-1 w-fit">
@@ -68,11 +83,20 @@ export default function Leave() {
                 <div key={t.id} className="rounded-2xl border border-border bg-surface p-5">
                   <p className="text-sm text-muted-foreground">{t.name}</p>
                   <p className="mt-2 font-display text-3xl">
-                    {left} <span className="text-base font-sans text-muted-foreground">/ {b.quota} left</span>
+                    {formatDays(left)}{" "}
+                    <span className="text-base font-sans text-muted-foreground">
+                      / {formatDays(b.quota)} accrued
+                    </span>
                   </p>
                   <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-surface-muted">
-                    <div className="h-full rounded-full" style={{ width: `${(b.used / b.quota) * 100}%`, backgroundColor: t.color }} />
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: b.quota > 0 ? `${(b.used / b.quota) * 100}%` : "0%", backgroundColor: t.color }}
+                    />
                   </div>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {formatDays(t.perMonth)}/month · up to {t.annualCap} in {LEAVE_YEAR_LABEL}
+                  </p>
                 </div>
               );
             })}

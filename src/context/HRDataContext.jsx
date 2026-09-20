@@ -151,6 +151,18 @@ export function HRDataProvider({ children }) {
     setState((s) => ({ ...s, onboardingPlans: groupOnboardingTasks(onboardingTasks) }));
   }
 
+  async function setProbation(employeeId, employmentStatus, probationEndDate) {
+    await api.setProbation(employeeId, employmentStatus, probationEndDate);
+    const employees = await api.getEmployees();
+    setState((s) => ({ ...s, employees, leaveBalances: deriveLeaveBalances(employees) }));
+  }
+
+  async function claimEmergency(employeeId, date, reason) {
+    await api.claimEmergency(employeeId, date, reason);
+    const attendanceRecords = await api.getAttendance();
+    setState((s) => ({ ...s, attendanceRecords }));
+  }
+
   async function completeOnboarding(employeeId) {
     await api.completeOnboarding(employeeId);
     const employees = await api.getEmployees();
@@ -223,6 +235,8 @@ export function HRDataProvider({ children }) {
         markWFH,
         updateOnboardingTask,
         completeOnboarding,
+        setProbation,
+        claimEmergency,
         addKudos,
         toggleLike,
         addAnnouncement,

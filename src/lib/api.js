@@ -35,6 +35,8 @@ export const api = {
   getEmployees: () => request("/employees"),
   addEmployee: (input) => post("/employees", input),
   completeOnboarding: (employeeId) => patch(`/employees/${employeeId}/complete-onboarding`, {}),
+  setProbation: (employeeId, employmentStatus, probationEndDate) =>
+    patch(`/employees/${employeeId}/probation`, { employmentStatus, probationEndDate }),
 
   getLeaveRequests: () => request("/leave-requests"),
   applyLeave: (input) => post("/leave-requests", input),
@@ -48,6 +50,7 @@ export const api = {
   checkIn: (employeeId) => post("/attendance/check-in", { employeeId }),
   checkOut: (employeeId) => post("/attendance/check-out", { employeeId }),
   markWfh: (employeeId) => post("/attendance/wfh", { employeeId }),
+  claimEmergency: (employeeId, date, reason) => post("/attendance/emergency", { employeeId, date, reason }),
 
   getOnboardingTasks: () => request("/onboarding-tasks"),
   updateOnboardingTask: (taskId, status) => patch(`/onboarding-tasks/${taskId}`, { status }),
