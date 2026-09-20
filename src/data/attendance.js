@@ -23,7 +23,7 @@ export function punctualityLabel(record) {
   if (!record) return null;
   const issues = [];
   if (record.lateCheckIn) issues.push("Late in");
-  if (record.earlyCheckOut) issues.push("Early out");
+  if (record.earlyCheckOut) issues.push("Left early");
   if (issues.length === 0) return null;
   return record.emergency ? `${issues.join(" · ")} (excused)` : issues.join(" · ");
 }

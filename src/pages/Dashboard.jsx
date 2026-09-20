@@ -54,7 +54,7 @@ export default function Dashboard() {
 
       <StatRow currentUser={currentUser} data={data} reports={reports} pendingApprovals={pendingApprovals} />
 
-      <GuideBanner />
+      <GuideBanner role={currentUser.role} />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
@@ -300,10 +300,21 @@ function AnnouncementRow({ announcement }) {
  * than buried in onboarding so it stays findable after week one — people
  * look for "how does leave work" long after they've stopped onboarding.
  */
-function GuideBanner() {
+// Admins and HR get the version that covers Settings and running the
+// portal; managers and employees get the shorter one, so nobody is handed
+// instructions for buttons they can't see.
+const GUIDES = {
+  admin: { file: "aurigin-people-guide-admin.pdf", label: "the admin guide" },
+  hr: { file: "aurigin-people-guide-hr.pdf", label: "the HR guide" },
+  manager: { file: "aurigin-people-guide-employee.pdf", label: "the guide" },
+  employee: { file: "aurigin-people-guide-employee.pdf", label: "the guide" },
+};
+
+function GuideBanner({ role }) {
+  const guide = GUIDES[role] ?? GUIDES.employee;
   return (
     <a
-      href="/aurigin-people-guide.pdf"
+      href={`/${guide.file}`}
       target="_blank"
       rel="noreferrer"
       className="flex items-center gap-4 rounded-2xl border border-border bg-surface p-5 transition hover:border-primary/40"
@@ -312,7 +323,7 @@ function GuideBanner() {
         <BookOpen className="h-5 w-5" />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-sm font-medium">New here? Start with the guide.</span>
+        <span className="block text-sm font-medium">New here? Start with {guide.label}.</span>
         <span className="block text-xs text-muted-foreground">
           A short introduction to Aurigin People — checking in, leave, working from home, and who to ask.
         </span>

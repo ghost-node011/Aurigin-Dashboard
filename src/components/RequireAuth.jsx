@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 function AuthLoadingScreen() {
   return (
     <div className="flex h-screen items-center justify-center bg-background">
-      <img src="/logo.png" alt="" className="h-12 w-12 animate-pulse rounded-xl object-cover" />
+      <img src="/logo-mark.png" alt="" className="h-12 w-12 animate-pulse object-contain" />
     </div>
   );
 }

@@ -31,58 +31,63 @@
 }
 
 :root {
-  --background: #f8f6ef;
+  /* Brand palette taken from the Aurigin Media logo: cobalt #114fd4 and
+     gold #fbbd2a. The neutrals are cooled to sit with the blue rather
+     than fight it. */
+  --background: #f6f8fd;
   --surface: #ffffff;
-  --surface-muted: #f1ecdd;
-  --border: #e4decb;
-  --foreground: #12193b;
-  --muted-foreground: #6e6852;
+  --surface-muted: #eef2fb;
+  --border: #dde4f4;
+  --foreground: #0f1833;
+  --muted-foreground: #5d6787;
 
-  --primary: #013fd2;
+  --primary: #114fd4;
   --primary-foreground: #ffffff;
-  --primary-soft: #e7ecfc;
+  --primary-soft: #e4ebfd;
 
-  --accent: #be3a0a;
-  --accent-foreground: #ffffff;
-  --accent-soft: #fdeadd;
+  /* Gold is too light to read as text on white, so anything sitting on it
+     uses the dark ink instead of white. */
+  --accent: #fbbd2a;
+  --accent-foreground: #0f1833;
+  --accent-soft: #fff5db;
 
-  --success: #15803d;
-  --success-soft: #e8f5ec;
-  --warning: #b45309;
-  --warning-soft: #fdf1e0;
-  --danger: #b91c1c;
-  --danger-soft: #fbe9e9;
-  --info: #0e7490;
-  --info-soft: #e0f2f4;
+  --success: #12794a;
+  --success-soft: #e4f4ec;
+  --warning: #a35a06;
+  --warning-soft: #fdf0dc;
+  --danger: #b91c30;
+  --danger-soft: #fce9ec;
+  --info: #0e6f9e;
+  --info-soft: #e2f1f9;
 
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --background: #0b0f1f;
-    --surface: #12162b;
-    --surface-muted: #1a1f3a;
-    --border: #262b47;
-    --foreground: #f4ebd9;
-    --muted-foreground: #a6a08e;
+    --background: #070c1c;
+    --surface: #101731;
+    --surface-muted: #18203f;
+    --border: #252e52;
+    --foreground: #eaf0fe;
+    --muted-foreground: #98a3c2;
 
-    --primary: #4a63e0;
-    --primary-foreground: #ffffff;
-    --primary-soft: #1b2550;
+    --primary: #5b82f0;
+    --primary-foreground: #06102b;
+    --primary-soft: #16224c;
 
-    --accent: #ff7a3d;
-    --accent-foreground: #0b0f1f;
-    --accent-soft: #2c1b10;
+    --accent: #fbbd2a;
+    --accent-foreground: #070c1c;
+    --accent-soft: #2f2611;
 
-    --success: #4ade80;
-    --success-soft: #10281a;
-    --warning: #fbbf24;
-    --warning-soft: #2c2210;
-    --danger: #f87171;
-    --danger-soft: #2c1414;
-    --info: #22d3ee;
-    --info-soft: #0b2530;
+    --success: #43d492;
+    --success-soft: #0d2a1e;
+    --warning: #f5b53c;
+    --warning-soft: #2e2411;
+    --danger: #f87a8c;
+    --danger-soft: #2e1419;
+    --info: #49c2ea;
+    --info-soft: #0b2833;
 
     color-scheme: dark;
   }

@@ -97,7 +97,7 @@ function WizardProgress({ stepIndex }) {
 function GreetingStep({ employee, onNext }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center text-center">
-      <img src="/logo.png" alt="" className="h-16 w-16 rounded-2xl object-cover" />
+      <img src="/logo-mark.png" alt="" className="h-16 w-16 object-contain" />
       <p className="mt-6 text-sm font-medium text-primary">Welcome to Aurigin Media</p>
       <h1 className="mt-2 font-display text-4xl font-semibold">
         Hey {employee.name.split(" ")[0]}, we're glad you're here.

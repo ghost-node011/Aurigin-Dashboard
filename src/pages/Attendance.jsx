@@ -83,10 +83,10 @@ export default function Attendance() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="text-xs text-muted-foreground">
-                Check in by {minutesToLabel(settings.checkInByMinutes)} · check out from {minutesToLabel(settings.checkOutFromMinutes)}
+                Office hours {minutesToLabel(settings.checkInByMinutes)} – {minutesToLabel(settings.checkOutFromMinutes)}
               </p>
               <p className="mt-1 text-sm">
-                {punctualityLabel(myTodayRecord) ?? (myTodayRecord ? "Within working hours." : "Not checked in yet.")}
+                {punctualityLabel(myTodayRecord) ?? (myTodayRecord ? "Full day recorded." : "Not checked in yet.")}
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-3">

@@ -199,16 +199,16 @@ export default function Settings() {
         </div>
       </Card>
 
-      <Card title="Working hours">
+      <Card title="Office hours">
         <div className="grid gap-4 sm:grid-cols-3">
-          <Field label="Check in by">
+          <Field label="Office starts">
             <Input
               type="time"
               value={minutesToTimeValue(draft.checkInByMinutes)}
               onChange={(e) => set("checkInByMinutes", timeValueToMinutes(e.target.value))}
             />
           </Field>
-          <Field label="Check out from">
+          <Field label="Office ends">
             <Input
               type="time"
               value={minutesToTimeValue(draft.checkOutFromMinutes)}
@@ -225,9 +225,21 @@ export default function Settings() {
             />
           </Field>
         </div>
+        <div className="mt-4">
+          <Field label="Flag late arrivals">
+            <Select
+              value={draft.enforceLateCheckIn ? "yes" : "no"}
+              onChange={(e) => set("enforceLateCheckIn", e.target.value === "yes")}
+              className="sm:w-72"
+            >
+              <option value="no">No — arriving late isn't held against anyone</option>
+              <option value="yes">Yes — flag check-ins after the start time</option>
+            </Select>
+          </Field>
+        </div>
         <p className="mt-3 text-xs text-muted-foreground">
-          A late check-in or early check-out is recorded and flagged, not refused. Employees can excuse that
-          many days each month.
+          Leaving before the end time is flagged, not refused — the day is still recorded. Employees can
+          excuse that many days each month.
         </p>
       </Card>
     </div>

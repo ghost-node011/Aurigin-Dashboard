@@ -213,7 +213,7 @@ export function HRDataProvider({ children }) {
   if (status === "loading" || status === "idle") {
     return (
       <div className="flex h-screen flex-col items-center justify-center gap-4 bg-background">
-        <img src="/logo.png" alt="" className="h-12 w-12 animate-pulse rounded-xl object-cover" />
+        <img src="/logo-mark.png" alt="" className="h-12 w-12 animate-pulse object-contain" />
         <p className="text-sm text-muted-foreground">Loading Aurigin People…</p>
       </div>
     );

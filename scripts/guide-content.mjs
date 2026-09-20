@@ -13,8 +13,9 @@ export const DEFAULTS = {
   leaveAllowedDuringProbation: false,
   wfhWeeklyQuota: 2,
   wfhProbationMonthlyQuota: 2,
-  checkInByMinutes: 11 * 60,
-  checkOutFromMinutes: 18 * 60,
+  checkInByMinutes: 10 * 60 + 30,
+  checkOutFromMinutes: 18 * 60 + 30,
+  enforceLateCheckIn: false,
   emergencyExceptionsPerMonth: 2,
 };
 
@@ -52,10 +53,16 @@ export function describeSettings(s) {
     ? "You can take it during probation as normal."
     : "It can be taken once your probation is successfully completed.";
 
+  const lateRule = s.enforceLateCheckIn
+    ? `Arriving after ${time(s.checkInByMinutes)} is flagged.`
+    : `Arriving after ${time(s.checkInByMinutes)} isn't held against you — the time is recorded, and that's all.`;
+
   return {
     checkInBy: time(s.checkInByMinutes),
     checkOutFrom: time(s.checkOutFromMinutes),
     hours: `${time(s.checkInByMinutes)} – ${time(s.checkOutFromMinutes)}`,
+    lateRule,
+    lateRuleShort: s.enforceLateCheckIn ? "Flagged" : "Recorded, not flagged",
     emergencies: plural(s.emergencyExceptionsPerMonth, "day"),
     leaveYear: `${startMonth} to ${endMonth}`,
     earned: rate("earned"),

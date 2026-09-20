@@ -59,7 +59,7 @@ export function Sidebar({ open = false, onClose }) {
       )}
     >
       <div className="flex items-center gap-2.5 px-5 py-5">
-        <img src="/logo.png" alt="" className="h-8 w-8 rounded-md object-cover" />
+        <img src="/logo-mark.png" alt="" className="h-8 w-8 object-contain" />
         <div className="min-w-0 flex-1">
           <p className="font-display text-base font-semibold leading-tight">Aurigin People</p>
           <p className="text-[11px] text-muted-foreground">HR Portal</p>

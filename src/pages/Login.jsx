@@ -34,7 +34,7 @@ export default function Login() {
       </div>
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center text-center">
-          <img src="/logo.png" alt="Aurigin Media" className="h-14 w-14 rounded-xl object-cover" />
+          <img src="/logo-full.png" alt="Aurigin Media" className="h-20 w-auto object-contain" />
           <h1 className="mt-4 font-display text-3xl font-semibold">Aurigin People</h1>
           <p className="mt-2 text-sm text-muted-foreground">Sign in with your Aurigin Media account.</p>
         </div>
