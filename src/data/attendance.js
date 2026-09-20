@@ -2,11 +2,15 @@
 // The backend is the authority — these exist so the rules can be shown and
 // checked in the UI before someone tries to spend an exception.
 
-export const CHECK_IN_BY_LABEL = "11:00 AM";
-export const CHECK_OUT_FROM_LABEL = "6:00 PM";
-
-/** Days per calendar month on which a late in / early out can be excused. */
-export const EMERGENCY_EXCEPTIONS_PER_MONTH = 2;
+/** Formats minutes past midnight as a display time, e.g. 660 -> "11:00 AM". */
+export function minutesToLabel(minutes) {
+  if (minutes == null) return "—";
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  const period = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m).padStart(2, "0")} ${period}`;
+}
 
 /** A day that broke a punctuality rule and hasn't been excused. */
 export function isNonCompliant(record) {

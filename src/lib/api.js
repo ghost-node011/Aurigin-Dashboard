@@ -59,6 +59,10 @@ export const api = {
   addKudos: (input) => post("/kudos", input),
   toggleLike: (kudosId, employeeId) => post(`/kudos/${kudosId}/like`, { employeeId }),
 
+  getSettings: () => request("/settings"),
+  updateSettings: (input) => patch("/settings", input),
+  resetSettings: () => post("/settings/reset", {}),
+
   getAnnouncements: () => request("/announcements"),
   addAnnouncement: (input) => post("/announcements", input),
 };

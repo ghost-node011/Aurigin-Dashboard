@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useHRData } from "../context/HRDataContext";
-import { LEAVE_TYPES, LEAVE_YEAR_LABEL, formatDays } from "../data/leave";
+import { LEAVE_TYPES, leaveYearLabel, formatDays } from "../data/leave";
 import { isOnProbation } from "../data/wfh";
 import { daysBetweenInclusive, formatMonthDay, todayISO } from "../lib/date";
 import { Card } from "../components/Card";
@@ -30,7 +30,8 @@ export default function Leave() {
   // Handbook §6.4 — leave accrues during probation but is availed only
   // after confirmation. The backend refuses it either way; disabling the
   // button here just avoids offering an action that can't succeed.
-  const onProbation = isOnProbation(currentUser);
+  const onProbation = isOnProbation(currentUser) && !data.settings.leaveAllowedDuringProbation;
+  const accrual = data.settings.leaveAccrual;
 
   return (
     <div className="space-y-6">
@@ -95,7 +96,8 @@ export default function Leave() {
                     />
                   </div>
                   <p className="mt-2 text-xs text-muted-foreground">
-                    {formatDays(t.perMonth)}/month · up to {t.annualCap} in {LEAVE_YEAR_LABEL}
+                    {formatDays(accrual[t.id].perMonth)}/month · up to {accrual[t.id].annualCap} in{" "}
+                    {leaveYearLabel(data.settings.leaveYearStartMonth)}
                   </p>
                 </div>
               );

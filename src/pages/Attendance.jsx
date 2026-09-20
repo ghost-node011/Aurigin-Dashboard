@@ -3,15 +3,8 @@ import { Home, Plus } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useHRData } from "../context/HRDataContext";
 import { todayISO, formatDate, formatMonthDay, getWeekRange, tomorrowISO } from "../lib/date";
-import { WFH_WEEKLY_QUOTA, WFH_PROBATION_MONTHLY_QUOTA, getWeeklyWfhDates, getMonthlyWfhDates, isOnProbation } from "../data/wfh";
-import {
-  CHECK_IN_BY_LABEL,
-  CHECK_OUT_FROM_LABEL,
-  EMERGENCY_EXCEPTIONS_PER_MONTH,
-  emergenciesUsedInMonth,
-  isNonCompliant,
-  punctualityLabel,
-} from "../data/attendance";
+import { getWeeklyWfhDates, getMonthlyWfhDates, isOnProbation } from "../data/wfh";
+import { emergenciesUsedInMonth, isNonCompliant, minutesToLabel, punctualityLabel } from "../data/attendance";
 import { Card } from "../components/Card";
 import { Badge } from "../components/Badge";
 import { Avatar } from "../components/Avatar";
@@ -60,10 +53,11 @@ export default function Attendance() {
   const [wfhApplyOpen, setWfhApplyOpen] = useState(false);
   const [emergencyOpen, setEmergencyOpen] = useState(false);
 
-  // Working hours are check-in by 11:00 and check-out from 18:00, with a
-  // small monthly allowance for genuine emergencies.
+  // Working hours and allowances are company settings, editable by HR.
+  const settings = data.settings;
+  const emergencyAllowance = settings.emergencyExceptionsPerMonth;
   const emergenciesUsed = emergenciesUsedInMonth(data.attendanceRecords, currentUser.id, today);
-  const emergenciesLeft = Math.max(0, EMERGENCY_EXCEPTIONS_PER_MONTH - emergenciesUsed);
+  const emergenciesLeft = Math.max(0, emergencyAllowance - emergenciesUsed);
   const todayNeedsExcuse = isNonCompliant(myTodayRecord);
 
   // On probation the WFH allowance is monthly, not weekly.
@@ -89,7 +83,7 @@ export default function Attendance() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="text-xs text-muted-foreground">
-                Check in by {CHECK_IN_BY_LABEL} · check out from {CHECK_OUT_FROM_LABEL}
+                Check in by {minutesToLabel(settings.checkInByMinutes)} · check out from {minutesToLabel(settings.checkOutFromMinutes)}
               </p>
               <p className="mt-1 text-sm">
                 {punctualityLabel(myTodayRecord) ?? (myTodayRecord ? "Within working hours." : "Not checked in yet.")}
@@ -97,7 +91,7 @@ export default function Attendance() {
             </div>
             <div className="flex shrink-0 items-center gap-3">
               <p className="text-xs text-muted-foreground">
-                {emergenciesLeft} of {EMERGENCY_EXCEPTIONS_PER_MONTH} emergency exceptions left this month
+                {emergenciesLeft} of {emergencyAllowance} emergency exceptions left this month
               </p>
               {todayNeedsExcuse && (
                 <Button size="sm" variant="outline" onClick={() => setEmergencyOpen(true)} disabled={emergenciesLeft === 0}>
@@ -109,7 +103,7 @@ export default function Attendance() {
 
           {onProbation && (
             <p className="mt-3 rounded-lg bg-warning-soft px-3 py-2 text-xs">
-              You're on probation — work from home is limited to {WFH_PROBATION_MONTHLY_QUOTA} day(s) per month
+              You're on probation — work from home is limited to {settings.wfhProbationMonthlyQuota} day(s) per month
               ({wfhMonthlyUsed} used), and leave can be availed after confirmation.
             </p>
           )}
@@ -157,7 +151,7 @@ export default function Attendance() {
           </span>
           <div>
             <p className="text-sm font-medium">
-              {wfhUsed} of {WFH_WEEKLY_QUOTA} used this week
+              {wfhUsed} of {settings.wfhWeeklyQuota} used this week
             </p>
             <p className="text-xs text-muted-foreground">
               Planned WFH needs approval from your manager (or HR/admin) before you can take it. For a same-day
@@ -252,6 +246,7 @@ export default function Attendance() {
         open={emergencyOpen}
         onClose={() => setEmergencyOpen(false)}
         left={emergenciesLeft}
+        allowance={emergencyAllowance}
         onSubmit={async (reason) => {
           await data.claimEmergency(currentUser.id, today, reason);
           setEmergencyOpen(false);
@@ -259,6 +254,7 @@ export default function Attendance() {
       />
 
       <ApplyWfhModal
+        weeklyQuota={settings.wfhWeeklyQuota}
         open={wfhApplyOpen}
         onClose={() => setWfhApplyOpen(false)}
         employeeId={currentUser.id}
@@ -268,7 +264,7 @@ export default function Attendance() {
   );
 }
 
-function ApplyWfhModal({ open, onClose, employeeId, onSubmit }) {
+function ApplyWfhModal({ open, onClose, employeeId, weeklyQuota, onSubmit }) {
   const [date, setDate] = useState(tomorrowISO());
   const [reason, setReason] = useState("");
   const canSubmit = date.length > 0 && reason.trim().length > 0;
@@ -292,7 +288,7 @@ function ApplyWfhModal({ open, onClose, employeeId, onSubmit }) {
           <Textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Let your manager know what's up…" />
         </Field>
         <p className="text-xs text-muted-foreground">
-          Up to {WFH_WEEKLY_QUOTA} WFH days are normal per week. This needs approval before the day arrives — for a
+          Up to {weeklyQuota} WFH days are normal per week. This needs approval before the day arrives — for a
           same-day emergency, use "Mark WFH" on the Attendance page instead.
         </p>
         <Button type="submit" disabled={!canSubmit} className="w-full">
@@ -307,7 +303,7 @@ function ApplyWfhModal({ open, onClose, employeeId, onSubmit }) {
  * Claims one of the month's emergency exceptions for today, excusing a
  * late check-in or an early check-out.
  */
-function EmergencyModal({ open, onClose, left, onSubmit }) {
+function EmergencyModal({ open, onClose, left, allowance, onSubmit }) {
   const [reason, setReason] = useState("");
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -328,8 +324,8 @@ function EmergencyModal({ open, onClose, left, onSubmit }) {
   return (
     <Modal open={open} onClose={onClose} title="Mark today as an emergency">
       <p className="text-sm text-muted-foreground">
-        This excuses today's late check-in or early check-out. You have {left} of{" "}
-        {EMERGENCY_EXCEPTIONS_PER_MONTH} exceptions left this month.
+        This excuses today's late check-in or early check-out. You have {left} of {allowance} exceptions
+        left this month.
       </p>
       <Field label="Reason" className="mt-4">
         <Textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="What happened?" />

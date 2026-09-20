@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Users, CalendarDays, Award, ClipboardList, ThumbsUp, Pin } from "lucide-react";
+import { Users, CalendarDays, Award, ClipboardList, ThumbsUp, Pin, BookOpen, Download } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useHRData } from "../context/HRDataContext";
 import { CORE_VALUES } from "../data/kudos";
@@ -53,6 +53,8 @@ export default function Dashboard() {
       </div>
 
       <StatRow currentUser={currentUser} data={data} reports={reports} pendingApprovals={pendingApprovals} />
+
+      <GuideBanner />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
@@ -290,5 +292,32 @@ function AnnouncementRow({ announcement }) {
         <span>{formatMonthDay(announcement.date)}</span>
       </div>
     </div>
+  );
+}
+
+/**
+ * Link to the printable introduction guide. Kept on the dashboard rather
+ * than buried in onboarding so it stays findable after week one — people
+ * look for "how does leave work" long after they've stopped onboarding.
+ */
+function GuideBanner() {
+  return (
+    <a
+      href="/aurigin-people-guide.pdf"
+      target="_blank"
+      rel="noreferrer"
+      className="flex items-center gap-4 rounded-2xl border border-border bg-surface p-5 transition hover:border-primary/40"
+    >
+      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary">
+        <BookOpen className="h-5 w-5" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-medium">New here? Start with the guide.</span>
+        <span className="block text-xs text-muted-foreground">
+          A short introduction to Aurigin People — checking in, leave, working from home, and who to ask.
+        </span>
+      </span>
+      <Download className="h-4 w-4 shrink-0 text-muted-foreground" />
+    </a>
   );
 }

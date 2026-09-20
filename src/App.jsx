@@ -14,6 +14,7 @@ import Recognition from "./pages/Recognition";
 import Announcements from "./pages/Announcements";
 import OrgChart from "./pages/OrgChart";
 import Analytics from "./pages/Analytics";
+import Settings from "./pages/Settings";
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
               <Route path="/org-chart" element={<OrgChart />} />
               <Route element={<RequireRole roles={["admin", "hr"]} />}>
                 <Route path="/analytics" element={<Analytics />} />
+                <Route path="/settings" element={<Settings />} />
               </Route>
             </Route>
           </Route>

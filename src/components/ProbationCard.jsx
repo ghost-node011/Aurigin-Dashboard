@@ -47,7 +47,7 @@ export function ProbationCard({ employee, canManage }) {
           </p>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {onProbation
-              ? `Until ${employee.probationEndDate ?? "—"}. Leave accrues but can't be availed, and work from home is limited to 2 days a month.`
+              ? `Until ${employee.probationEndDate ?? "—"}. ${data.settings.leaveAllowedDuringProbation ? "Leave can be availed" : "Leave accrues but can't be availed"}, and work from home is limited to ${data.settings.wfhProbationMonthlyQuota} day(s) a month.`
               : employee.confirmedOn
                 ? `Confirmed on ${employee.confirmedOn}.`
                 : "Full leave and work-from-home entitlements apply."}

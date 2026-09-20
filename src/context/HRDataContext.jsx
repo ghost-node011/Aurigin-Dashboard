@@ -22,6 +22,7 @@ function deriveLeaveBalances(employees) {
 }
 
 const EMPTY_STATE = {
+  settings: null,
   employees: [],
   leaveBalances: {},
   leaveRequests: [],
@@ -42,8 +43,9 @@ export function HRDataProvider({ children }) {
     setStatus("loading");
     setError(null);
     try {
-      const [employees, leaveRequests, wfhRequests, attendanceRecords, onboardingTasks, kudos, announcements] =
+      const [settings, employees, leaveRequests, wfhRequests, attendanceRecords, onboardingTasks, kudos, announcements] =
         await Promise.all([
+          api.getSettings(),
           api.getEmployees(),
           api.getLeaveRequests(),
           api.getWfhRequests(),
@@ -53,6 +55,7 @@ export function HRDataProvider({ children }) {
           api.getAnnouncements(),
         ]);
       setState({
+        settings,
         employees,
         leaveBalances: deriveLeaveBalances(employees),
         leaveRequests,
@@ -151,6 +154,20 @@ export function HRDataProvider({ children }) {
     setState((s) => ({ ...s, onboardingPlans: groupOnboardingTasks(onboardingTasks) }));
   }
 
+  async function updateSettings(input) {
+    const settings = await api.updateSettings(input);
+    // Accrual quotas are derived from these rules, so employees are
+    // refetched alongside them rather than left showing stale balances.
+    const employees = await api.getEmployees();
+    setState((s) => ({ ...s, settings, employees, leaveBalances: deriveLeaveBalances(employees) }));
+  }
+
+  async function resetSettings() {
+    const settings = await api.resetSettings();
+    const employees = await api.getEmployees();
+    setState((s) => ({ ...s, settings, employees, leaveBalances: deriveLeaveBalances(employees) }));
+  }
+
   async function setProbation(employeeId, employmentStatus, probationEndDate) {
     await api.setProbation(employeeId, employmentStatus, probationEndDate);
     const employees = await api.getEmployees();
@@ -235,6 +252,8 @@ export function HRDataProvider({ children }) {
         markWFH,
         updateOnboardingTask,
         completeOnboarding,
+        updateSettings,
+        resetSettings,
         setProbation,
         claimEmergency,
         addKudos,
