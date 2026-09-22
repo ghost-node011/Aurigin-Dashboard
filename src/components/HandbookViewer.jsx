@@ -28,7 +28,7 @@ export function HandbookViewer({ file, jumpToPage, onReachedEnd, className }) {
   // Load the document once.
   useEffect(() => {
     let cancelled = false;
-    const task = pdfjs.getDocument(file);
+    const task = pdfjs.getDocument({ url: file });
     task.promise.then(
       (doc) => {
         if (cancelled) return;
