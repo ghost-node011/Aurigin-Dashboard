@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { useHRData } from "../context/HRDataContext";
 import { CORE_VALUES } from "../data/kudos";
 import { ANNOUNCEMENT_CATEGORIES } from "../data/announcements";
-import { LEAVE_TYPES } from "../data/leave";
+import { LEAVE_TYPES, formatDays } from "../data/leave";
 import { todayISO, formatMonthDay } from "../lib/date";
 import { Card } from "../components/Card";
 import { StatTile } from "../components/StatTile";
@@ -166,7 +166,11 @@ export default function Dashboard() {
 
 function StatRow({ currentUser, data, reports, pendingApprovals }) {
   const myLeave = data.leaveBalances[currentUser.id];
-  const totalLeaveLeft = LEAVE_TYPES.reduce((sum, t) => sum + (myLeave[t.id].quota - myLeave[t.id].used), 0);
+  // Paid leave people plan around — fixed allowances like marriage leave or
+  // LWP would inflate the figure without being days anyone can just take.
+  const totalLeaveLeft = formatDays(
+    ["earned", "casual", "sick"].reduce((sum, id) => sum + (myLeave[id].quota - myLeave[id].used), 0),
+  );
   const presentToday = reports.filter((r) =>
     data.attendanceRecords.some((rec) => rec.employeeId === r.id && rec.date === todayISO() && ["Present", "WFH"].includes(rec.status)),
   ).length;
@@ -197,9 +201,9 @@ function StatRow({ currentUser, data, reports, pendingApprovals }) {
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
       <StatTile label="Leave balance" value={totalLeaveLeft} icon={Award} tone="primary" sub="days remaining" />
-      <StatTile label="Casual left" value={myLeave.casual.quota - myLeave.casual.used} icon={CalendarDays} tone="info" />
-      <StatTile label="Sick left" value={myLeave.sick.quota - myLeave.sick.used} icon={CalendarDays} tone="warning" />
-      <StatTile label="Earned left" value={myLeave.earned.quota - myLeave.earned.used} icon={CalendarDays} tone="success" />
+      <StatTile label="Casual left" value={formatDays(myLeave.casual.quota - myLeave.casual.used)} icon={CalendarDays} tone="info" />
+      <StatTile label="Sick left" value={formatDays(myLeave.sick.quota - myLeave.sick.used)} icon={CalendarDays} tone="warning" />
+      <StatTile label="Earned left" value={formatDays(myLeave.earned.quota - myLeave.earned.used)} icon={CalendarDays} tone="success" />
     </div>
   );
 }

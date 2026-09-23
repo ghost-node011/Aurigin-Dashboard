@@ -2,7 +2,15 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useHRData } from "../context/HRDataContext";
-import { LEAVE_TYPES, leaveYearLabel, formatDays } from "../data/leave";
+import {
+  LEAVE_TYPES,
+  ACCRUED_LEAVE_TYPES,
+  ALLOWANCE_LEAVE_TYPES,
+  leaveTypeName,
+  requiredNoticeDays,
+  leaveYearLabel,
+  formatDays,
+} from "../data/leave";
 import { isOnProbation } from "../data/wfh";
 import { daysBetweenInclusive, formatMonthDay, todayISO } from "../lib/date";
 import { Card } from "../components/Card";
@@ -31,7 +39,7 @@ export default function Leave() {
   // after confirmation. The backend refuses it either way; disabling the
   // button here just avoids offering an action that can't succeed.
   const onProbation = isOnProbation(currentUser) && !data.settings.leaveAllowedDuringProbation;
-  const accrual = data.settings.leaveAccrual;
+  const { leaveAccrual: accrual, leaveAllowances: allowances } = data.settings;
 
   return (
     <div className="space-y-6">
@@ -76,8 +84,8 @@ export default function Leave() {
 
       {tab === "mine" || !canApprove ? (
         <>
-          <div className="grid gap-4 sm:grid-cols-3">
-            {LEAVE_TYPES.map((t) => {
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {ACCRUED_LEAVE_TYPES.map((t) => {
               const b = balances[t.id];
               const left = b.quota - b.used;
               return (
@@ -86,7 +94,7 @@ export default function Leave() {
                   <p className="mt-2 font-display text-3xl">
                     {formatDays(left)}{" "}
                     <span className="text-base font-sans text-muted-foreground">
-                      / {formatDays(b.quota)} accrued
+                      / {formatDays(b.quota)} available
                     </span>
                   </p>
                   <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-surface-muted">
@@ -98,11 +106,32 @@ export default function Leave() {
                   <p className="mt-2 text-xs text-muted-foreground">
                     {formatDays(accrual[t.id].perMonth)}/month · up to {accrual[t.id].annualCap} in{" "}
                     {leaveYearLabel(data.settings.leaveYearStartMonth)}
+                    {b.carriedForward > 0 && ` · includes ${formatDays(b.carriedForward)} carried forward`}
                   </p>
                 </div>
               );
             })}
           </div>
+
+          <Card title="Other leave">
+            <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+              {ALLOWANCE_LEAVE_TYPES.map((t) => {
+                const b = balances[t.id];
+                return (
+                  <div key={t.id} className="flex items-baseline justify-between gap-3 border-b border-border pb-2.5 text-sm">
+                    <span>{t.name}</span>
+                    <span className="shrink-0 text-muted-foreground">
+                      {formatDays(b.quota - b.used)} of {allowances[t.id]} days left
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">
+              Available in full each leave year, subject to the conditions in Employee Handbook §6. Maternity
+              leave follows the statutory entitlement — speak to HR.
+            </p>
+          </Card>
 
           <Card title="My requests">
             {myRequests.length === 0 ? (
@@ -112,7 +141,10 @@ export default function Leave() {
                 {myRequests.map((r) => (
                   <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-border py-3 last:border-b-0">
                     <div>
-                      <p className="text-sm font-medium">{LEAVE_TYPES.find((t) => t.id === r.type).name}</p>
+                      <p className="text-sm font-medium">
+                        {leaveTypeName(r.type)}
+                        {r.emergency && <span className="ml-2 text-xs font-normal text-warning">Emergency</span>}
+                      </p>
                       <p className="text-xs text-muted-foreground">
                         {formatMonthDay(r.startDate)} – {formatMonthDay(r.endDate)} · {r.days}d · {r.reason}
                       </p>
@@ -174,7 +206,8 @@ function ApprovalsTab({ currentUser, data }) {
                     <Avatar employee={employee} size="sm" />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium">
-                        {employee.name} · {LEAVE_TYPES.find((t) => t.id === r.type).name}
+                        {employee.name} · {leaveTypeName(r.type)}
+                        {r.emergency && <span className="ml-2 text-xs font-normal text-warning">Emergency · short notice</span>}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {formatMonthDay(r.startDate)} – {formatMonthDay(r.endDate)} · {r.days}d · {r.reason}
@@ -211,7 +244,7 @@ function ApprovalsTab({ currentUser, data }) {
                 <Avatar employee={employee} size="sm" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm">
-                    {employee.name} · {LEAVE_TYPES.find((t) => t.id === r.type).name} · {r.days}d
+                    {employee.name} · {leaveTypeName(r.type)} · {r.days}d
                   </p>
                 </div>
                 <Badge>{r.status}</Badge>
@@ -229,16 +262,32 @@ function ApplyLeaveModal({ open, onClose, employeeId, onSubmit }) {
   const [startDate, setStartDate] = useState(todayISO());
   const [endDate, setEndDate] = useState(todayISO());
   const [reason, setReason] = useState("");
+  const [emergency, setEmergency] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
 
   const days = startDate && endDate && endDate >= startDate ? daysBetweenInclusive(startDate, endDate) : 0;
-  const canSubmit = days > 0 && reason.trim().length > 0;
+  // Handbook §6.5–6.6 notice, measured from today to the first day off.
+  const notice = requiredNoticeDays(type, days);
+  const shortNotice = days > 0 && daysBetweenInclusive(todayISO(), startDate) - 1 < notice;
+  const canSubmit = days > 0 && reason.trim().length > 0 && (!shortNotice || emergency) && !busy;
+  const selected = LEAVE_TYPES.find((t) => t.id === type);
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     if (!canSubmit) return;
-    onSubmit({ employeeId, type, startDate, endDate, reason: reason.trim() });
-    setReason("");
-    onClose();
+    setBusy(true);
+    setError(null);
+    try {
+      await onSubmit({ employeeId, type, startDate, endDate, reason: reason.trim(), emergency: shortNotice });
+      setReason("");
+      setEmergency(false);
+      onClose();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -253,6 +302,7 @@ function ApplyLeaveModal({ open, onClose, employeeId, onSubmit }) {
             ))}
           </Select>
         </Field>
+        <p className="-mt-2 text-xs text-muted-foreground">{selected.note}</p>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Start date" required>
             <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
@@ -262,9 +312,24 @@ function ApplyLeaveModal({ open, onClose, employeeId, onSubmit }) {
           </Field>
         </div>
         <p className="text-xs text-muted-foreground">{days > 0 ? `${days} day${days > 1 ? "s" : ""}` : "Pick valid dates"}</p>
+        {shortNotice && (
+          <label className="flex items-start gap-2.5 rounded-lg border border-warning/30 bg-warning-soft p-3 text-sm">
+            <input
+              type="checkbox"
+              checked={emergency}
+              onChange={(e) => setEmergency(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+            />
+            <span>
+              This needs {notice} days' notice. Tick if it's a genuine emergency — your manager will see it was
+              short notice (Handbook §6.12).
+            </span>
+          </label>
+        )}
         <Field label="Reason" required>
           <Textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Let your manager know what's up…" />
         </Field>
+        {error && <p className="text-sm text-danger">{error}</p>}
         <Button type="submit" disabled={!canSubmit} className="w-full">
           Submit request
         </Button>

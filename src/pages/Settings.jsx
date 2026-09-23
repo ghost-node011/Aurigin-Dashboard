@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { RotateCcw, Save } from "lucide-react";
 import { useHRData } from "../context/HRDataContext";
-import { LEAVE_TYPES } from "../data/leave";
+import { ACCRUED_LEAVE_TYPES, ALLOWANCE_LEAVE_TYPES } from "../data/leave";
 import { Card } from "../components/Card";
 import { Button } from "../components/Button";
 import { Field, Input, Select } from "../components/Input";
@@ -45,6 +45,11 @@ export default function Settings() {
       ...d,
       leaveAccrual: { ...d.leaveAccrual, [type]: { ...d.leaveAccrual[type], [key]: value } },
     }));
+  }
+
+  function setAllowance(type, value) {
+    setSaved(false);
+    setDraft((d) => ({ ...d, leaveAllowances: { ...d.leaveAllowances, [type]: value } }));
   }
 
   async function save() {
@@ -107,7 +112,7 @@ export default function Settings() {
           Leave is earned month by month. The cap is the most that can accrue in one leave year.
         </p>
         <div className="mt-4 space-y-4">
-          {LEAVE_TYPES.map((t) => (
+          {ACCRUED_LEAVE_TYPES.map((t) => (
             <div key={t.id} className="grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
               <p className="text-sm font-medium">{t.name}</p>
               <Field label="Days per month">
@@ -150,6 +155,26 @@ export default function Settings() {
         </div>
       </Card>
 
+      <Card title="Other leave">
+        <p className="text-sm text-muted-foreground">
+          Days available in full each leave year. Notice periods, the 15-day stretch limit and earned-leave
+          carry-forward follow the handbook and aren't editable here.
+        </p>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          {ALLOWANCE_LEAVE_TYPES.map((t) => (
+            <Field key={t.id} label={`${t.name} (days per year)`}>
+              <Input
+                type="number"
+                step="0.5"
+                min="0"
+                value={draft.leaveAllowances[t.id]}
+                onChange={(e) => setAllowance(t.id, Number(e.target.value))}
+              />
+            </Field>
+          ))}
+        </div>
+      </Card>
+
       <Card title="Probation">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Default probation length (months)">
@@ -174,29 +199,6 @@ export default function Settings() {
         <p className="mt-3 text-xs text-muted-foreground">
           Confirming an employee stays a manual step — this only sets the default end date for new hires.
         </p>
-      </Card>
-
-      <Card title="Work from home">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Days per week (confirmed employees)">
-            <Input
-              type="number"
-              min="0"
-              max="7"
-              value={draft.wfhWeeklyQuota}
-              onChange={(e) => set("wfhWeeklyQuota", Number(e.target.value))}
-            />
-          </Field>
-          <Field label="Days per month (on probation)">
-            <Input
-              type="number"
-              min="0"
-              max="31"
-              value={draft.wfhProbationMonthlyQuota}
-              onChange={(e) => set("wfhProbationMonthlyQuota", Number(e.target.value))}
-            />
-          </Field>
-        </div>
       </Card>
 
       <Card title="Office hours">
@@ -238,7 +240,7 @@ export default function Settings() {
           </Field>
         </div>
         <p className="mt-3 text-xs text-muted-foreground">
-          Leaving before the end time is flagged, not refused — the day is still recorded. Employees can
+          The handbook's hours are 10:00 a.m. to 7:00 p.m. (§1.12). Leaving before the end time is flagged, not refused — the day is still recorded. Employees can
           excuse that many days each month.
         </p>
       </Card>

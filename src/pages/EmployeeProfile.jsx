@@ -3,7 +3,7 @@ import { ArrowLeft, Mail, Phone, MapPin, Briefcase, CalendarPlus, Award } from "
 import { useAuth } from "../context/AuthContext";
 import { useHRData } from "../context/HRDataContext";
 import { DEPARTMENTS } from "../data/departments";
-import { LEAVE_TYPES } from "../data/leave";
+import { LEAVE_TYPES, formatDays } from "../data/leave";
 import { computeOnboardingProgress } from "../data/onboarding";
 import { formatDate } from "../lib/date";
 import { Avatar } from "../components/Avatar";
@@ -152,13 +152,13 @@ export default function EmployeeProfile() {
                       <div className="flex items-center justify-between text-sm">
                         <span>{t.name}</span>
                         <span className="text-muted-foreground">
-                          {left} / {b.quota} left
+                          {formatDays(left)} / {formatDays(b.quota)} left
                         </span>
                       </div>
                       <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-surface-muted">
                         <div
                           className="h-full rounded-full"
-                          style={{ width: `${(b.used / b.quota) * 100}%`, backgroundColor: t.color }}
+                          style={{ width: b.quota > 0 ? `${(b.used / b.quota) * 100}%` : "0%", backgroundColor: t.color }}
                         />
                       </div>
                     </div>

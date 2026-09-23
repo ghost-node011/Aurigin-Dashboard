@@ -2,8 +2,8 @@ import { useMemo, useState } from "react";
 import { Home, Plus } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useHRData } from "../context/HRDataContext";
-import { todayISO, formatDate, formatMonthDay, getWeekRange, tomorrowISO } from "../lib/date";
-import { getWeeklyWfhDates, getMonthlyWfhDates, isOnProbation } from "../data/wfh";
+import { todayISO, formatDate, formatMonthDay, tomorrowISO } from "../lib/date";
+import { isOnProbation } from "../data/wfh";
 import { emergenciesUsedInMonth, isNonCompliant, minutesToLabel, punctualityLabel } from "../data/attendance";
 import { Card } from "../components/Card";
 import { Badge } from "../components/Badge";
@@ -38,10 +38,6 @@ export default function Attendance() {
   const canApproveWfh = ["manager", "hr", "admin"].includes(currentUser.role) && (reports.length > 0 || isOrgWideApprover);
   const [teamDate, setTeamDate] = useState(today);
 
-  const weekRange = getWeekRange(today);
-  const myWfhDatesThisWeek = getWeeklyWfhDates(data.wfhRequests, data.attendanceRecords, currentUser.id, weekRange.start, weekRange.end);
-  const wfhUsed = myWfhDatesThisWeek.size;
-
   const myWfhRequests = data.wfhRequests
     .filter((r) => r.employeeId === currentUser.id)
     .sort((a, b) => b.appliedOn.localeCompare(a.appliedOn));
@@ -53,16 +49,14 @@ export default function Attendance() {
   const [wfhApplyOpen, setWfhApplyOpen] = useState(false);
   const [emergencyOpen, setEmergencyOpen] = useState(false);
 
-  // Working hours and allowances are company settings, editable by HR.
+  // Working hours and the emergency allowance are company settings, editable by HR.
   const settings = data.settings;
   const emergencyAllowance = settings.emergencyExceptionsPerMonth;
   const emergenciesUsed = emergenciesUsedInMonth(data.attendanceRecords, currentUser.id, today);
   const emergenciesLeft = Math.max(0, emergencyAllowance - emergenciesUsed);
   const todayNeedsExcuse = isNonCompliant(myTodayRecord);
 
-  // On probation the WFH allowance is monthly, not weekly.
   const onProbation = isOnProbation(currentUser);
-  const wfhMonthlyUsed = getMonthlyWfhDates(data.wfhRequests, data.attendanceRecords, currentUser.id, today).size;
 
   return (
     <div className="space-y-6">
@@ -103,8 +97,7 @@ export default function Attendance() {
 
           {onProbation && (
             <p className="mt-3 rounded-lg bg-warning-soft px-3 py-2 text-xs">
-              You're on probation — work from home is limited to {settings.wfhProbationMonthlyQuota} day(s) per month
-              ({wfhMonthlyUsed} used), and leave can be availed after confirmation.
+              You're on probation — leave keeps accruing and can be availed after confirmation.
             </p>
           )}
         </div>
@@ -150,12 +143,10 @@ export default function Attendance() {
             <Home className="h-4 w-4" />
           </span>
           <div>
-            <p className="text-sm font-medium">
-              {wfhUsed} of {settings.wfhWeeklyQuota} used this week
-            </p>
+            <p className="text-sm font-medium">Available with your manager's approval</p>
             <p className="text-xs text-muted-foreground">
-              Planned WFH needs approval from your manager (or HR/admin) before you can take it. For a same-day
-              emergency, "Mark WFH" above stays instant.
+              There's no fixed number of days — remote work is agreed case by case (Handbook §1.13). Apply ahead
+              of the day; for a same-day emergency, "Mark WFH" above stays instant.
             </p>
           </div>
         </div>
@@ -254,7 +245,6 @@ export default function Attendance() {
       />
 
       <ApplyWfhModal
-        weeklyQuota={settings.wfhWeeklyQuota}
         open={wfhApplyOpen}
         onClose={() => setWfhApplyOpen(false)}
         employeeId={currentUser.id}
@@ -264,7 +254,7 @@ export default function Attendance() {
   );
 }
 
-function ApplyWfhModal({ open, onClose, employeeId, weeklyQuota, onSubmit }) {
+function ApplyWfhModal({ open, onClose, employeeId, onSubmit }) {
   const [date, setDate] = useState(tomorrowISO());
   const [reason, setReason] = useState("");
   const canSubmit = date.length > 0 && reason.trim().length > 0;
@@ -288,8 +278,8 @@ function ApplyWfhModal({ open, onClose, employeeId, weeklyQuota, onSubmit }) {
           <Textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Let your manager know what's up…" />
         </Field>
         <p className="text-xs text-muted-foreground">
-          Up to {weeklyQuota} WFH days are normal per week. This needs approval before the day arrives — for a
-          same-day emergency, use "Mark WFH" on the Attendance page instead.
+          This needs your manager's approval before the day arrives — for a same-day emergency, use "Mark WFH"
+          on the Attendance page instead.
         </p>
         <Button type="submit" disabled={!canSubmit} className="w-full">
           Submit request
