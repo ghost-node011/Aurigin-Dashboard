@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ChevronRight, Eye, EyeOff, Link2, Plus, Trash2, X } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
@@ -44,6 +44,10 @@ export default function IssuePage() {
   const [error, setError] = useState(null);
   const [notFound, setNotFound] = useState(false);
   const [createChild, setCreateChild] = useState(false);
+  // Edits go out one at a time: two quick changes (status, then a label)
+  // would otherwise race, and whichever reply lands last would overwrite
+  // the page with a copy missing the other change.
+  const queue = useRef(Promise.resolve());
 
   const load = useCallback(
     () =>
@@ -78,14 +82,18 @@ export default function IssuePage() {
   }
   if (!issue) return <p className="text-sm text-muted-foreground">{error ?? "Loading…"}</p>;
 
-  async function update(changes) {
+  function update(changes) {
     setError(null);
-    try {
-      setIssue(await api.updateIssue(issue.key, changes));
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    }
+    const run = queue.current.then(async () => {
+      try {
+        setIssue(await api.updateIssue(issue.key, changes));
+      } catch (err) {
+        setError(err.message);
+        throw err;
+      }
+    });
+    queue.current = run.catch(() => {});
+    return run;
   }
   const quiet = (changes) => update(changes).catch(() => {});
 

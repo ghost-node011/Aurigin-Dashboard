@@ -430,14 +430,14 @@ const SECTIONS = {
       title: "Plan in the morning, wrap up before you leave",
       intro: "My Day turns a few plain sentences into your to-do list and timeline, and at the end of the day closes what got done. Your work reporters — the administrator, your manager and anyone HR adds — see a short digest of both.",
     });
-    y = step(doc, y, 1, "Morning: write your overview", "After the morning discussion, write what you'll work on the way you'd say it — “Fix the leave-page date bug, review Dhruv's PR, then start the onboarding emails.” Press Create my plan.");
-    y = step(doc, y, 2, "The AI builds your plan", "Each piece of work becomes an issue with a priority and a time slot across the rest of your day, filed into the project it belongs to. You can pick one project for everything instead. Unfinished work from earlier days is picked up, not duplicated.");
+    y = step(doc, y, 1, "Check in, then write your overview", "My Day opens once you've checked in. After the morning discussion, write what you'll work on the way you'd say it — “Fix the login crash, build the pricing page, review Dhruv's PR. Next week: API docs.” Press Create my plan.");
+    y = step(doc, y, 2, "The AI builds your plan", "Today's work becomes tasks with a type (Bug, Story or Task), a priority and a time slot, each filed into the project it belongs to. Anything you mention for later, or a bug you noticed but aren't fixing today, goes straight to the backlog, ready to be picked back up another day.");
     y = step(doc, y, 3, "During the day", "Change a task's status from the timeline, or open it to add detail, files or comments. Something new came up? Add more work — it's scheduled after what's already there.");
-    y = step(doc, y, 4, "Evening: write your summary", "Before you leave, say what got done, what's half done, what blocked you and roughly how long things took. Press Close my day — the AI marks each task Done, In Progress, In Review, Blocked or To Do, logs the time, and reviews your day.");
+    y = step(doc, y, 4, "Evening: write your summary", "Before you leave, say what got done, what's half done, what blocked you, and any bug or follow-up you found. Press Close my day — finished work is closed, anything unfinished moves to the backlog, new bugs and follow-ups are added there, and your day is reviewed.");
     return card(doc, y + 2, {
       tone: "accent",
       title: "The review, and Performance",
-      body: "You get a score out of 10, what went well, what to improve and a short note. It's stored day by day under Performance — you see yours; your manager, work reporters and HR see it too. Blockers outside your control aren't held against you, so mention them.",
+      body: "You get a score out of 100 for getting the planned work done, what went well, what to improve and a short note. It's stored day by day under Performance — you see yours; your manager, work reporters and HR see it too. Blockers outside your control aren't held against you, so mention them. Wrong type, or parked by mistake? Change it on the task.",
     });
   },
 
@@ -450,7 +450,7 @@ const SECTIONS = {
     y = card(doc, y, {
       tone: "brand",
       title: "Types and status",
-      body: "An Epic is a big piece of work holding Stories, Tasks and Bugs; any of those can be split into Sub-tasks. Status moves To Do → In Progress → In Review → Done, with Blocked for when something outside the issue is in the way.",
+      body: "An Epic is a big piece of work holding Stories, Tasks and Bugs; any of those can be split into Sub-tasks. My Day's AI picks Bug, Story or Task for you. Status moves To Do → In Progress → In Review → Done, with Blocked when something outside the issue is in the way. Planning says whether it's an active task, parked in the backlog, or in a sprint.",
     });
     y = card(doc, y, {
       title: "The issue page",
@@ -478,7 +478,7 @@ const SECTIONS = {
     });
     y = card(doc, y, {
       title: "Backlog",
-      body: "Upcoming work in priority order, with sprints above it. Drag issues up and down to reorder, or into a sprint to plan it. Type in the Create issue row for a quick task, or use Create for the full form.",
+      body: "Sprints on top, then Active tasks (work in hand) and the Backlog (work parked for later — unfinished days, later work and bugs from My Day, or moved there by a reviewer). Drag to reorder or move between them. The board leaves backlog items out.",
     });
     y = card(doc, y, {
       title: "Issues search",

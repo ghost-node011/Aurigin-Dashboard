@@ -1,9 +1,18 @@
+/**
+ * A Date's calendar day as YYYY-MM-DD, in local time. Not
+ * `toISOString().slice(0, 10)`: that converts to UTC first, so before
+ * 05:30 in India it reports the previous day.
+ */
 export function toISODate(date) {
-  return date.toISOString().slice(0, 10);
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
+/** Today in company time (India), matching the server's "today" wherever the browser is. */
 export function todayISO() {
-  return toISODate(new Date());
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
 }
 
 export function nowTime() {
@@ -17,7 +26,7 @@ export function addDays(date, days) {
 }
 
 export function tomorrowISO() {
-  return toISODate(addDays(new Date(), 1));
+  return toISODate(addDays(new Date(todayISO() + "T00:00:00"), 1));
 }
 
 export function formatDate(isoOrDate, opts = { month: "short", day: "numeric", year: "numeric" }) {
