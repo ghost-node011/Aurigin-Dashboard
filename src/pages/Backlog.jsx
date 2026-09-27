@@ -15,11 +15,13 @@ import { CreateIssueModal } from "../components/issues/CreateIssueModal";
 import { SprintFormModal, CompleteSprintModal } from "../components/issues/SprintModals";
 import { cn } from "../lib/cn";
 
-const BACKLOG = "backlog";
+import { ACTIVE, BACKLOG, planningValue } from "../data/work";
 
 /**
- * Scrum backlog: open sprints on top, the backlog below. Drag issues to
- * reorder them or move them between sprints and the backlog.
+ * Planning: open sprints on top, then active tasks (work in hand that isn't
+ * in a sprint) and the backlog (work parked for later — unfinished days,
+ * later work and unfixed bugs from My Day, or moved there by hand). Drag
+ * issues to reorder them or move them between sections.
  */
 export default function Backlog() {
   const data = useHRData();
@@ -72,9 +74,10 @@ export default function Backlog() {
   }, [issues, epicFilter, query]);
 
   const sections = useMemo(() => {
-    const bySprint = (id) => filtered.filter((i) => (i.sprintId ?? BACKLOG) === id);
+    const bySprint = (id) => filtered.filter((i) => planningValue(i) === id);
     return [
       ...(sprints ?? []).map((s) => ({ id: s.id, sprint: s, issues: bySprint(s.id) })),
+      { id: ACTIVE, sprint: null, issues: bySprint(ACTIVE) },
       { id: BACKLOG, sprint: null, issues: bySprint(BACKLOG) },
     ];
   }, [filtered, sprints]);
@@ -88,19 +91,21 @@ export default function Backlog() {
     if (!issue || issue.id === beforeId) return;
     // The section's full order (ignoring search/epic filters), with the
     // dragged issue slotted in before `beforeId` or at the end.
-    const order = issues.filter((i) => (i.sprintId ?? BACKLOG) === sectionId && i.id !== issue.id).map((i) => i.id);
+    const order = issues.filter((i) => planningValue(i) === sectionId && i.id !== issue.id).map((i) => i.id);
     const at = beforeId ? order.indexOf(beforeId) : -1;
     order.splice(at === -1 ? order.length : at, 0, issue.id);
 
-    const sprintId = sectionId === BACKLOG ? null : sectionId;
+    const isSprint = sectionId !== BACKLOG && sectionId !== ACTIVE;
+    const sprintId = isSprint ? sectionId : null;
+    const inBacklog = sectionId === BACKLOG;
     const previous = issues;
     setIssues((list) => {
-      const moved = list.map((i) => (i.id === issue.id ? { ...i, sprintId } : i));
+      const moved = list.map((i) => (i.id === issue.id ? { ...i, sprintId, inBacklog } : i));
       const rank = new Map(order.map((id, n) => [id, n]));
       return [...moved].sort((a, b) => (rank.get(a.id) ?? Infinity) - (rank.get(b.id) ?? Infinity));
     });
     try {
-      await api.rankIssues(order, sprintId);
+      await api.rankIssues(order, sprintId, inBacklog);
     } catch (err) {
       setIssues(previous);
       setError(err.message);
@@ -201,7 +206,7 @@ export default function Backlog() {
                   className="flex items-center gap-1.5 font-medium"
                 >
                   {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                  {s ? s.name : "Backlog"}
+                  {s ? s.name : section.id === ACTIVE ? "Active tasks" : "Backlog"}
                 </button>
                 {s?.state === "active" && <Badge tone="info">Active</Badge>}
                 <span className="text-xs text-muted-foreground">
@@ -250,7 +255,11 @@ export default function Backlog() {
                 <div className="border-t border-border">
                   {section.issues.length === 0 && (
                     <p className="px-4 py-6 text-center text-sm text-muted-foreground">
-                      {s ? "Drag issues here to plan this sprint." : "Your backlog is empty."}
+                      {s
+                        ? "Drag issues here to plan this sprint."
+                        : section.id === ACTIVE
+                        ? "No active tasks outside a sprint."
+                        : "Nothing parked. Unfinished work from My Day, later work and bugs land here."}
                     </p>
                   )}
                   <ul>
@@ -308,7 +317,13 @@ export default function Backlog() {
                   </ul>
                   <QuickCreate
                     onCreate={async (title) => {
-                      await api.addIssue({ projectKey: current.key, title, type: "Task", sprintId: s?.id ?? null });
+                      await api.addIssue({
+                        projectKey: current.key,
+                        title,
+                        type: "Task",
+                        sprintId: s?.id ?? null,
+                        inBacklog: section.id === BACKLOG,
+                      });
                       load();
                     }}
                   />

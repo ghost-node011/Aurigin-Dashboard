@@ -86,7 +86,8 @@ export const api = {
   updateIssue: (ref, input) => patch(`/issues/${ref}`, input),
   deleteIssue: (ref) => request(`/issues/${ref}`, { method: "DELETE" }),
   bulkUpdateIssues: (issueIds, changes) => post("/issues/bulk", { issueIds, changes }),
-  rankIssues: (issueIds, sprintId) => post("/issues/rank", { issueIds, ...(sprintId !== undefined && { sprintId }) }),
+  rankIssues: (issueIds, sprintId, inBacklog) =>
+    post("/issues/rank", { issueIds, ...(sprintId !== undefined && { sprintId }), ...(inBacklog !== undefined && { inBacklog }) }),
   watchIssue: (ref, watch) => post(`/issues/${ref}/watch`, { watch }),
   addIssueLink: (ref, type, issueKey) => post(`/issues/${ref}/links`, { type, issueKey }),
   removeIssueLink: (ref, linkId) => request(`/issues/${ref}/links/${linkId}`, { method: "DELETE" }),

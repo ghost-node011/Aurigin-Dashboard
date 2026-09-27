@@ -11,7 +11,7 @@ export function ReviewCard({ plan, title = "Today's review", showSummary = false
       action={review.rating ? <Badge tone={RATING_TONE[review.rating]}>{review.rating}</Badge> : null}
     >
       <div className="grid gap-4 sm:grid-cols-3">
-        <Stat label="Score" value={review.score != null ? `${review.score} / 10` : "—"} />
+        <Stat label="Score" value={review.score != null ? `${review.score} / 100` : "—"} />
         <Stat label="Tickets done" value={`${review.completed ?? 0} / ${review.total ?? 0}`} />
         <Stat label="Time logged" value={formatMinutes(review.minutesLogged)} />
       </div>

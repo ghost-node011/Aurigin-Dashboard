@@ -5,7 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { useHRData } from "../context/HRDataContext";
 import { api } from "../lib/api";
 import { formatMonthDay } from "../lib/date";
-import { ISSUE_TYPES, ISSUE_STATUSES, ISSUE_PRIORITIES } from "../data/work";
+import { ISSUE_TYPES, ISSUE_STATUSES, ISSUE_PRIORITIES, ACTIVE, BACKLOG, planningChanges } from "../data/work";
 import { useProjects } from "../hooks/useProjects";
 import { Card } from "../components/Card";
 import { Badge } from "../components/Badge";
@@ -25,6 +25,7 @@ const BUILT_IN = [
   { name: "Reported by me", query: { reporter: "me" } },
   { name: "Watching", query: { watcher: "me" } },
   { name: "Open bugs", query: { type: "Bug", status: "To Do,In Progress,In Review,Blocked" } },
+  { name: "My backlog", query: { assignee: "me", sprint: "backlog" } },
   { name: "Recently updated", query: { sort: "updated" } },
 ];
 
@@ -219,7 +220,8 @@ export default function Issues() {
             {labels.length > 0 && <FilterSelect label="Label" value={query.label} onChange={(v) => setParam("label", v)} options={labels} />}
             <FilterSelect label="Sprint" value={query.sprint} onChange={(v) => setParam("sprint", v)}>
               <option value="active">Active sprints</option>
-              <option value="backlog">Backlog (no sprint)</option>
+              <option value="none">Active tasks (no sprint)</option>
+              <option value="backlog">Backlog</option>
               {sprints.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
@@ -257,9 +259,7 @@ export default function Issues() {
                 onPick={(v) => bulk({ assigneeId: v === "none" ? null : v })}
                 options={[["none", "Unassigned"], ...data.employees.map((e) => [e.id, e.name])]}
               />
-              {oneProject && (
-                <BulkSprintSelect projectKey={oneProject} disabled={bulkBusy} onPick={(v) => bulk({ sprintId: v === "backlog" ? null : v })} />
-              )}
+              <BulkSprintSelect projectKey={oneProject} disabled={bulkBusy} onPick={(v) => bulk(planningChanges(v))} />
               <button type="button" onClick={() => setSelected(new Set())} className="ml-auto text-xs text-muted-foreground hover:text-foreground">
                 Clear selection
               </button>
@@ -417,9 +417,11 @@ function BulkSelect({ label, options, onPick, disabled }) {
   );
 }
 
+/** Backlog and active task always; sprints only when every selected issue is in one project. */
 function BulkSprintSelect({ projectKey, onPick, disabled }) {
   const [sprints, setSprints] = useState([]);
   useEffect(() => {
+    if (!projectKey) return setSprints([]);
     api.getSprints(projectKey).then((s) => setSprints(s.filter((x) => x.state !== "closed")), () => setSprints([]));
   }, [projectKey]);
   return (
@@ -427,7 +429,11 @@ function BulkSprintSelect({ projectKey, onPick, disabled }) {
       label="Move to"
       disabled={disabled}
       onPick={onPick}
-      options={[["backlog", "Backlog"], ...sprints.map((s) => [s.id, s.name + (s.state === "active" ? " (active)" : "")])]}
+      options={[
+        [ACTIVE, "Active task"],
+        [BACKLOG, "Backlog"],
+        ...sprints.map((s) => [s.id, s.name + (s.state === "active" ? " (active)" : "")]),
+      ]}
     />
   );
 }

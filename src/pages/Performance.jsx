@@ -41,7 +41,7 @@ export default function Performance() {
   }, [employeeId]);
 
   const scored = (days ?? []).filter((d) => d.review?.score != null);
-  const average = scored.length ? Math.round((scored.reduce((s, d) => s + d.review.score, 0) / scored.length) * 10) / 10 : null;
+  const average = scored.length ? Math.round(scored.reduce((s, d) => s + d.review.score, 0) / scored.length) : null;
   const completed = (days ?? []).reduce((s, d) => s + (d.review?.completed ?? 0), 0);
   const total = (days ?? []).reduce((s, d) => s + (d.review?.total ?? 0), 0);
   const minutes = (days ?? []).reduce((s, d) => s + (d.review?.minutesLogged ?? 0), 0);
@@ -77,7 +77,7 @@ export default function Performance() {
       {days && days.length > 0 && (
         <>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <Tile label="Average score" value={average != null ? `${average} / 10` : "—"} />
+            <Tile label="Average score" value={average != null ? `${average} / 100` : "—"} />
             <Tile label="Days reviewed" value={days.length} />
             <Tile label="Tickets done" value={`${completed} / ${total}`} />
             <Tile label="Time logged" value={formatMinutes(minutes)} />
@@ -101,7 +101,7 @@ export default function Performance() {
                       <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-muted">
                         <span
                           className="block h-full rounded-full bg-primary"
-                          style={{ width: `${((d.review?.score ?? 0) / 10) * 100}%` }}
+                          style={{ width: `${d.review?.score ?? 0}%` }}
                         />
                       </span>
                       <span className="w-12 shrink-0 text-right tabular-nums">{d.review?.score ?? "—"}</span>

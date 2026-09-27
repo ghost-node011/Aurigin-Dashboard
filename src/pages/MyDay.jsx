@@ -11,6 +11,9 @@ import { Button } from "../components/Button";
 import { Select, Textarea } from "../components/Input";
 import { ReviewCard } from "../components/work/ReviewCard";
 import { useProjects } from "../hooks/useProjects";
+import { useHRData } from "../context/HRDataContext";
+import { AttendanceWidget } from "../components/AttendanceWidget";
+import { todayISO } from "../lib/date";
 
 /**
  * "My Day": write a morning overview and the AI turns it into tickets on
@@ -22,6 +25,7 @@ export default function MyDay() {
   const [loadError, setLoadError] = useState(null);
   const { projects } = useProjects();
   const { currentUser } = useAuth();
+  const data = useHRData();
 
   useEffect(() => {
     api.getWorkDay().then(setDay, (err) => setLoadError(err.message));
@@ -30,9 +34,14 @@ export default function MyDay() {
   if (loadError) return <p className="text-sm text-danger">{loadError}</p>;
   if (!day) return <p className="text-sm text-muted-foreground">Loading your day…</p>;
 
-  const { plan, tickets } = day;
+  const { plan, tickets, backlog = [] } = day;
   const planned = Boolean(plan?.plannedAt);
   const closed = Boolean(plan?.closedAt);
+  // The day starts at check-in (test accounts excepted), matching the server.
+  const checkedIn =
+    currentUser.policyExempt ||
+    data.attendanceRecords.some((r) => r.employeeId === currentUser.id && r.date === todayISO() && r.checkIn);
+  const myTodayRecord = data.attendanceRecords.find((r) => r.employeeId === currentUser.id && r.date === todayISO());
 
   async function setTicketStatus(ticket, status) {
     const updated = await api.updateIssue(ticket.key, { status });
@@ -49,7 +58,22 @@ export default function MyDay() {
         </p>
       </div>
 
-      {!planned && (
+      {!planned && !checkedIn && (
+        <Card title="Check in to start your day">
+          <p className="mb-4 text-sm text-muted-foreground">
+            My Day opens once you've checked in. Check in here or on the Attendance page, then write your morning
+            overview.
+          </p>
+          <AttendanceWidget
+            record={myTodayRecord}
+            onCheckIn={() => data.checkIn(currentUser.id)}
+            onCheckOut={() => data.checkOut(currentUser.id)}
+            onWFH={() => data.markWFH(currentUser.id)}
+          />
+        </Card>
+      )}
+
+      {!planned && checkedIn && (
         <OverviewForm
           title="Morning overview"
           icon={Sun}
@@ -135,11 +159,34 @@ export default function MyDay() {
         <OverviewForm
           title="End-of-day summary"
           icon={Moon}
-          hint="What got done, what's still in progress, what blocked you, and roughly how long things took. The AI closes the finished tickets, logs time and reviews your day."
+          hint="What got done, what's still in progress and what blocked you — plus any bug or follow-up you found. The AI closes finished tasks, moves unfinished ones to the backlog and reviews your day."
           placeholder="e.g. Fixed the leave date bug and shipped it (about 2h). PR review done. Onboarding templates half done — waiting on copy from HR."
           submitLabel="Close my day"
           onSubmit={async (summary) => setDay(await api.closeDay(summary))}
         />
+      )}
+
+      {backlog.length > 0 && (
+        <Card title={`Sent to the backlog today (${backlog.length})`}>
+          <ul className="divide-y divide-border">
+            {backlog.map((t) => (
+              <li key={t.id} className="flex items-center gap-2.5 py-2 text-sm">
+                <TypeIcon type={t.type} />
+                <Link to={`/browse/${t.key}`} className="shrink-0 font-mono text-xs text-muted-foreground hover:text-primary">
+                  {t.key}
+                </Link>
+                <Link to={`/browse/${t.key}`} className="min-w-0 flex-1 truncate hover:text-primary">
+                  {t.title}
+                </Link>
+                <span className="shrink-0 text-xs text-muted-foreground">{t.inBacklog ? t.status : "Picked back up"}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Later work and bugs from your overview, and anything unfinished at the end of the day. Tomorrow's plan can
+            pick them back up — or a reviewer can move them on the Backlog page.
+          </p>
+        </Card>
       )}
 
       {closed && (

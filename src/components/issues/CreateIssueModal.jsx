@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useHRData } from "../../context/HRDataContext";
 import { api } from "../../lib/api";
-import { ISSUE_TYPES, ISSUE_PRIORITIES, parseDuration } from "../../data/work";
+import { ISSUE_TYPES, ISSUE_PRIORITIES, parseDuration, ACTIVE, BACKLOG, planningChanges } from "../../data/work";
 import { Modal } from "../Modal";
 import { Button } from "../Button";
 import { Field, Input, Select } from "../Input";
@@ -30,7 +30,8 @@ export function CreateIssueModal({ open, onClose, projects, defaults = {}, onCre
     estimate: "",
     dueDate: "",
     parentId: defaults.parentId ?? "",
-    sprintId: defaults.sprintId ?? "",
+    // Active task unless the caller says otherwise (a backlog section, a sprint).
+    planning: defaults.sprintId ?? (defaults.inBacklog ? BACKLOG : ACTIVE),
   });
   const [form, setForm] = useState(blank);
   const [attachments, setAttachments] = useState([]);
@@ -72,13 +73,13 @@ export function CreateIssueModal({ open, onClose, projects, defaults = {}, onCre
         storyPoints: form.storyPoints === "" ? null : Number(form.storyPoints),
         estimateMinutes,
         parentId: form.type === "Epic" ? null : form.parentId || null,
-        sprintId: isSubtask || form.type === "Epic" ? null : form.sprintId || null,
+        ...(isSubtask || form.type === "Epic" ? { sprintId: null, inBacklog: false } : planningChanges(form.planning)),
         dueDate: form.dueDate || null,
         attachments,
       });
       onCreated?.(issue);
       if (createAnother) {
-        setForm((f) => ({ ...blank(), projectKey: f.projectKey, type: f.type, sprintId: f.sprintId, parentId: f.parentId }));
+        setForm((f) => ({ ...blank(), projectKey: f.projectKey, type: f.type, planning: f.planning, parentId: f.parentId }));
         setAttachments([]);
       } else {
         onClose();
@@ -166,9 +167,10 @@ export function CreateIssueModal({ open, onClose, projects, defaults = {}, onCre
             </Field>
           )}
           {!isSubtask && form.type !== "Epic" && (
-            <Field label="Sprint">
-              <Select value={form.sprintId} onChange={set("sprintId")}>
-                <option value="">Backlog</option>
+            <Field label="Planning">
+              <Select value={form.planning} onChange={set("planning")}>
+                <option value={ACTIVE}>Active task</option>
+                <option value={BACKLOG}>Backlog</option>
                 {sprints.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}

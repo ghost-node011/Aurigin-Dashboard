@@ -2,10 +2,14 @@ import { Link } from "react-router-dom";
 import { Select } from "../Input";
 
 /** The project switcher shown on the board, backlog and issue search. */
-export function ProjectPicker({ projects, current, onChange }) {
+export const ALL_PROJECTS = "ALL";
+
+/** The project switcher shown on the board, backlog and issue search. `allowAll` adds "All projects". */
+export function ProjectPicker({ projects, current, onChange, allowAll = false }) {
   return (
     <div className="flex items-center gap-2">
-      <Select value={current?.key ?? ""} onChange={(e) => onChange(e.target.value)} className="h-9 w-56" aria-label="Project">
+      <Select value={current?.key ?? ALL_PROJECTS} onChange={(e) => onChange(e.target.value)} className="h-9 w-56" aria-label="Project">
+        {allowAll && <option value={ALL_PROJECTS}>All projects</option>}
         {projects.map((p) => (
           <option key={p.key} value={p.key}>
             {p.name} ({p.key})

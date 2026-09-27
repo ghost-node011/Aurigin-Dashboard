@@ -12,23 +12,47 @@ import { Avatar } from "../components/Avatar";
 import { Button } from "../components/Button";
 import { Input, Select } from "../components/Input";
 import { TypeIcon, PriorityIcon } from "../components/issues/IssueIcons";
-import { ProjectPicker } from "../components/issues/ProjectPicker";
+import { ProjectPicker, ALL_PROJECTS } from "../components/issues/ProjectPicker";
 import { CreateIssueModal } from "../components/issues/CreateIssueModal";
 import { CompleteSprintModal } from "../components/issues/SprintModals";
 import { cn } from "../lib/cn";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const BOARD_KEY = "aurigin.board";
+
+// The board remembers its own pick (default: all projects), separate from
+// the backlog's, which always needs one project.
+function readBoardPick() {
+  try {
+    return localStorage.getItem(BOARD_KEY) ?? ALL_PROJECTS;
+  } catch {
+    return ALL_PROJECTS;
+  }
+}
 
 /**
- * The project board. With an active sprint it shows that sprint (Scrum);
- * without one it shows every open issue in the project (Kanban). Drag a
- * card between columns to change its status.
+ * The board. "All projects" (the default) shows every open task across
+ * projects as Kanban. A single project shows its active sprint (Scrum), or
+ * all its open work when no sprint is running. Drag a card between columns
+ * to change its status.
  */
 export default function Board() {
   const { currentUser } = useAuth();
   const data = useHRData();
   const navigate = useNavigate();
-  const { projects, current, setProjectKey, error: projectError } = useProjects();
+  const { projects, error: projectError } = useProjects();
+  const [pick, setPick] = useState(readBoardPick);
+  const allProjects = pick === ALL_PROJECTS;
+  const current = allProjects ? null : projects.find((p) => p.key === pick) ?? null;
+  function setProjectKey(key) {
+    setPick(key);
+    if (key !== ALL_PROJECTS) setSwimlanes((s) => (s === "project" ? "none" : s));
+    try {
+      localStorage.setItem(BOARD_KEY, key);
+    } catch {
+      // Storage blocked — the pick just isn't remembered.
+    }
+  }
   const [sprint, setSprint] = useState(undefined); // undefined = loading, null = none active
   const [futureSprints, setFutureSprints] = useState([]);
   const [issues, setIssues] = useState(null);
@@ -43,8 +67,18 @@ export default function Board() {
   const [completeOpen, setCompleteOpen] = useState(false);
 
   const load = useCallback(async () => {
-    if (!current) return;
     setError(null);
+    if (allProjects) {
+      try {
+        setSprint(null);
+        setFutureSprints([]);
+        setIssues(await api.searchIssues({ sort: "rank" }));
+      } catch (err) {
+        setError(err.message);
+      }
+      return;
+    }
+    if (!current) return;
     try {
       const sprints = await api.getSprints(current.key);
       const active = sprints.find((s) => s.state === "active") ?? null;
@@ -56,13 +90,20 @@ export default function Board() {
     } catch (err) {
       setError(err.message);
     }
-  }, [current]);
+  }, [current, allProjects]);
 
   useEffect(() => {
     setIssues(null);
     setSprint(undefined);
     load();
   }, [load]);
+
+  // A remembered project that's since been archived or removed: fall back to all.
+  const pickMissing = !allProjects && projects.length > 0 && !current;
+  useEffect(() => {
+    if (pickMissing) setProjectKey(ALL_PROJECTS);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pickMissing]);
 
   const labels = useMemo(() => [...new Set((issues ?? []).flatMap((i) => i.labels))].sort(), [issues]);
   const epicsById = useMemo(
@@ -76,6 +117,8 @@ export default function Board() {
     return (issues ?? []).filter(
       (i) =>
         i.type !== "Epic" &&
+        // Parked work lives in the backlog, not on the board.
+        !i.inBacklog &&
         // Kanban mode hides long-finished work so Done doesn't grow forever.
         (sprint || i.status !== "Done" || now - new Date(i.updatedAt).getTime() < 14 * DAY_MS) &&
         (!onlyMine || i.assigneeId === currentUser.id) &&
@@ -89,7 +132,8 @@ export default function Board() {
     if (swimlanes === "none") return [{ id: "all", title: null, issues: visible }];
     const groups = new Map();
     for (const issue of visible) {
-      const id = swimlanes === "assignee" ? issue.assigneeId ?? "none" : issue.parentId ?? "none";
+      const id =
+        swimlanes === "assignee" ? issue.assigneeId ?? "none" : swimlanes === "project" ? issue.projectKey : issue.parentId ?? "none";
       if (!groups.has(id)) groups.set(id, []);
       groups.get(id).push(issue);
     }
@@ -97,6 +141,7 @@ export default function Board() {
       .map(([id, list]) => {
         let title;
         if (swimlanes === "assignee") title = id === "none" ? "Unassigned" : data.getEmployee(id)?.name ?? id;
+        else if (swimlanes === "project") title = projects.find((p) => p.key === id)?.name ?? id;
         else {
           const epic = epicsById.get(id);
           title = id === "none" ? "No epic" : epic ? `${epic.key} ${epic.title}` : "Sub-tasks of other issues";
@@ -104,7 +149,7 @@ export default function Board() {
         return { id, title, issues: list };
       })
       .sort((a, b) => (a.id === "none") - (b.id === "none") || a.title.localeCompare(b.title));
-  }, [visible, swimlanes, data, epicsById]);
+  }, [visible, swimlanes, data, epicsById, projects]);
 
   function onDrop(status, e) {
     e.preventDefault();
@@ -121,7 +166,7 @@ export default function Board() {
   }
 
   if (projectError) return <p className="text-sm text-danger">{projectError}</p>;
-  if (!current) return <p className="text-sm text-muted-foreground">Loading projects…</p>;
+  if (!allProjects && !current) return <p className="text-sm text-muted-foreground">Loading projects…</p>;
 
   const daysLeft = sprint?.endDate ? Math.ceil((new Date(sprint.endDate + "T23:59:59") - new Date()) / DAY_MS) : null;
 
@@ -129,10 +174,15 @@ export default function Board() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-sm text-muted-foreground">{current.name} board</p>
+          <p className="text-sm text-muted-foreground">{allProjects ? "All projects" : `${current.name} board`}</p>
           <h1 className="font-display text-3xl font-semibold">{sprint ? sprint.name : "Kanban"}</h1>
           {sprint?.goal && <p className="mt-1 text-sm text-muted-foreground">{sprint.goal}</p>}
-          {sprint === null && (
+          {allProjects && (
+            <p className="mt-1 text-sm text-muted-foreground">
+              Every open task across projects. Pick a project to see its sprint.
+            </p>
+          )}
+          {!allProjects && sprint === null && (
             <p className="mt-1 text-sm text-muted-foreground">
               No active sprint — showing all open work.{" "}
               <Link to="/backlog" className="text-primary hover:underline">
@@ -164,7 +214,7 @@ export default function Board() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <ProjectPicker projects={projects} current={current} onChange={setProjectKey} />
+        <ProjectPicker projects={projects} current={current} onChange={setProjectKey} allowAll />
         <div className="relative w-full sm:w-56">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search this board" className="h-9 py-1.5 pl-9" />
@@ -187,6 +237,7 @@ export default function Board() {
           <option value="none">No swimlanes</option>
           <option value="assignee">Group by assignee</option>
           <option value="epic">Group by epic</option>
+          {allProjects && <option value="project">Group by project</option>}
         </Select>
       </div>
 
@@ -254,7 +305,7 @@ export default function Board() {
         open={createOpen}
         onClose={() => setCreateOpen(false)}
         projects={projects}
-        defaults={{ projectKey: current.key, sprintId: sprint?.id, stayOnPage: true }}
+        defaults={{ projectKey: current?.key, sprintId: sprint?.id, stayOnPage: true }}
         onCreated={() => load()}
       />
       {sprint && (

@@ -11,6 +11,10 @@ import {
   LINK_TYPES,
   formatMinutes,
   parseDuration,
+  ACTIVE,
+  BACKLOG,
+  planningValue,
+  planningChanges,
 } from "../data/work";
 import { useProjects } from "../hooks/useProjects";
 import { Badge } from "../components/Badge";
@@ -229,9 +233,10 @@ export default function IssuePage() {
               </Detail>
             )}
             {!isSubtask && issue.type !== "Epic" && (
-              <Detail label="Sprint">
-                <Select value={issue.sprintId ?? ""} onChange={(e) => quiet({ sprintId: e.target.value || null })} className="h-8 text-sm">
-                  <option value="">Backlog</option>
+              <Detail label="Planning">
+                <Select value={planningValue(issue)} onChange={(e) => quiet(planningChanges(e.target.value))} className="h-8 text-sm">
+                  <option value={ACTIVE}>Active task</option>
+                  <option value={BACKLOG}>Backlog</option>
                   {issue.sprint?.state === "closed" && <option value={issue.sprint.id}>{issue.sprint.name} (closed)</option>}
                   {sprints.map((s) => (
                     <option key={s.id} value={s.id}>

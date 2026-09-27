@@ -27,6 +27,21 @@ export const PRIORITY_COLOR = {
 
 export const LINK_TYPES = ["blocks", "is blocked by", "relates to", "duplicates", "is duplicated by", "clones", "is cloned by"];
 
+// Where an issue sits: an active task, parked in the backlog, or in a sprint.
+// One control for all three, so the two flags behind it can't disagree.
+export const ACTIVE = "active";
+export const BACKLOG = "backlog";
+
+export function planningValue(issue) {
+  return issue.sprintId ?? (issue.inBacklog ? BACKLOG : ACTIVE);
+}
+
+export function planningChanges(value) {
+  if (value === BACKLOG) return { sprintId: null, inBacklog: true };
+  if (value === ACTIVE) return { sprintId: null, inBacklog: false };
+  return { sprintId: value, inBacklog: false };
+}
+
 export const RATING_TONE = {
   Outstanding: "success",
   Strong: "success",
