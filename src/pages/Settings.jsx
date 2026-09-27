@@ -202,7 +202,7 @@ export default function Settings() {
       </Card>
 
       <Card title="Office hours">
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Office starts">
             <Input
               type="time"
@@ -215,6 +215,15 @@ export default function Settings() {
               type="time"
               value={minutesToTimeValue(draft.checkOutFromMinutes)}
               onChange={(e) => set("checkOutFromMinutes", timeValueToMinutes(e.target.value))}
+            />
+          </Field>
+          <Field label="Check-in opens (minutes before start)">
+            <Input
+              type="number"
+              min="0"
+              max="720"
+              value={draft.checkInOpensMinutesBefore ?? 45}
+              onChange={(e) => set("checkInOpensMinutesBefore", Number(e.target.value))}
             />
           </Field>
           <Field label="Emergency exceptions per month">
