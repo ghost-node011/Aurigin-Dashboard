@@ -149,6 +149,9 @@ export default function Board() {
                   {daysLeft >= 0 ? `${daysLeft} day${daysLeft === 1 ? "" : "s"} left` : `${-daysLeft} days over`}
                 </span>
               )}
+              <Link to={`/sprints/${sprint.id}/report`} className="text-sm text-primary hover:underline">
+                Sprint report
+              </Link>
               <Button variant="outline" onClick={() => setCompleteOpen(true)}>
                 Complete sprint
               </Button>

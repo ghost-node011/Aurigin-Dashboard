@@ -154,6 +154,12 @@ export function HRDataProvider({ children }) {
     setState((s) => ({ ...s, onboardingPlans: groupOnboardingTasks(onboardingTasks) }));
   }
 
+  async function updateOnboardingNote(taskId, note) {
+    await api.updateOnboardingNote(taskId, note);
+    const onboardingTasks = await api.getOnboardingTasks();
+    setState((s) => ({ ...s, onboardingPlans: groupOnboardingTasks(onboardingTasks) }));
+  }
+
   async function updateSettings(input) {
     const settings = await api.updateSettings(input);
     // Accrual quotas are derived from these rules, so employees are
@@ -170,6 +176,12 @@ export function HRDataProvider({ children }) {
 
   async function setWorkReporters(employeeId, workReporterIds) {
     await api.setWorkReporters(employeeId, workReporterIds);
+    const employees = await api.getEmployees();
+    setState((s) => ({ ...s, employees, leaveBalances: deriveLeaveBalances(employees) }));
+  }
+
+  async function setPolicyExempt(employeeId, policyExempt) {
+    await api.setPolicyExempt(employeeId, policyExempt);
     const employees = await api.getEmployees();
     setState((s) => ({ ...s, employees, leaveBalances: deriveLeaveBalances(employees) }));
   }
@@ -263,12 +275,14 @@ export function HRDataProvider({ children }) {
         checkOut,
         markWFH,
         updateOnboardingTask,
+        updateOnboardingNote,
         completeOnboarding,
         updateSettings,
         resetSettings,
         setProbation,
         setWorkReporters,
         setProjectManager,
+        setPolicyExempt,
         claimEmergency,
         addKudos,
         toggleLike,

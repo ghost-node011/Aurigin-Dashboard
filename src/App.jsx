@@ -22,6 +22,7 @@ import Backlog from "./pages/Backlog";
 import Issues from "./pages/Issues";
 import IssuePage from "./pages/IssuePage";
 import Projects from "./pages/Projects";
+import SprintReport from "./pages/SprintReport";
 
 export default function App() {
   return (
@@ -40,6 +41,7 @@ export default function App() {
               <Route path="/issues" element={<Issues />} />
               <Route path="/browse/:issueKey" element={<IssuePage />} />
               <Route path="/projects" element={<Projects />} />
+              <Route path="/sprints/:sprintId/report" element={<SprintReport />} />
               <Route path="/performance" element={<Performance />} />
               <Route path="/attendance" element={<Attendance />} />
               <Route path="/leave" element={<Leave />} />

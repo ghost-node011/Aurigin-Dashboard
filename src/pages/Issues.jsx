@@ -41,11 +41,16 @@ export default function Issues() {
   const [labels, setLabels] = useState([]);
   const [sprints, setSprints] = useState([]);
   const [createOpen, setCreateOpen] = useState(false);
+  const [selected, setSelected] = useState(() => new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkNote, setBulkNote] = useState(null);
+  const [reload, setReload] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     setResults(null);
     setError(null);
+    setSelected(new Set());
     api.searchIssues({ sort: "updated", ...query }).then(
       (r) => !cancelled && setResults(r),
       (err) => !cancelled && setError(err.message),
@@ -53,7 +58,7 @@ export default function Issues() {
     return () => {
       cancelled = true;
     };
-  }, [query]);
+  }, [query, reload]);
 
   useEffect(() => {
     api.getFilters().then(setFilters, () => {});
@@ -98,6 +103,29 @@ export default function Issues() {
   }
 
   const activeCount = Object.entries(query).filter(([k, v]) => v && k !== "sort").length;
+
+  // Sprints only make sense within one project.
+  const selectedIssues = (results ?? []).filter((i) => selected.has(i.id));
+  const oneProject = new Set(selectedIssues.map((i) => i.projectKey)).size === 1 ? selectedIssues[0]?.projectKey : null;
+
+  async function bulk(changes) {
+    setBulkBusy(true);
+    setBulkNote(null);
+    try {
+      const { updated, results: rs } = await api.bulkUpdateIssues([...selected], changes);
+      const failed = rs.filter((r) => !r.ok);
+      setBulkNote(
+        failed.length
+          ? `Updated ${updated}. Couldn't update ${failed.map((f) => `${f.key ?? f.id} (${f.error})`).join(", ")}.`
+          : `Updated ${updated} issue${updated === 1 ? "" : "s"}.`,
+      );
+      setReload((n) => n + 1);
+    } catch (err) {
+      setBulkNote(err.message);
+    } finally {
+      setBulkBusy(false);
+    }
+  }
 
   return (
     <div className="space-y-5">
@@ -218,6 +246,27 @@ export default function Issues() {
 
           {error && <p className="text-sm text-danger">{error}</p>}
 
+          {selected.size > 0 && (
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-primary/30 bg-primary-soft px-3 py-2 text-sm">
+              <span className="font-medium">{selected.size} selected</span>
+              <BulkSelect label="Set status" disabled={bulkBusy} onPick={(v) => bulk({ status: v })} options={ISSUE_STATUSES.map((s) => [s, s])} />
+              <BulkSelect label="Set priority" disabled={bulkBusy} onPick={(v) => bulk({ priority: v })} options={ISSUE_PRIORITIES.map((p) => [p, p])} />
+              <BulkSelect
+                label="Assign to"
+                disabled={bulkBusy}
+                onPick={(v) => bulk({ assigneeId: v === "none" ? null : v })}
+                options={[["none", "Unassigned"], ...data.employees.map((e) => [e.id, e.name])]}
+              />
+              {oneProject && (
+                <BulkSprintSelect projectKey={oneProject} disabled={bulkBusy} onPick={(v) => bulk({ sprintId: v === "backlog" ? null : v })} />
+              )}
+              <button type="button" onClick={() => setSelected(new Set())} className="ml-auto text-xs text-muted-foreground hover:text-foreground">
+                Clear selection
+              </button>
+            </div>
+          )}
+          {bulkNote && <p className="text-sm text-muted-foreground">{bulkNote}</p>}
+
           <Card className="overflow-hidden" title={results ? `${results.length} issue${results.length === 1 ? "" : "s"}` : "Searching…"}>
             {results && results.length === 0 && <p className="text-sm text-muted-foreground">No issues match these filters.</p>}
             {results && results.length > 0 && (
@@ -225,6 +274,15 @@ export default function Issues() {
                 <table className="w-full min-w-[48rem] text-sm">
                   <thead className="border-b border-border text-left text-xs text-muted-foreground">
                     <tr>
+                      <th className="w-8 py-2 pl-4">
+                        <input
+                          type="checkbox"
+                          aria-label="Select all"
+                          checked={results.length > 0 && selected.size === results.length}
+                          onChange={(e) => setSelected(e.target.checked ? new Set(results.map((i) => i.id)) : new Set())}
+                          className="h-4 w-4 accent-primary"
+                        />
+                      </th>
                       <th className="px-4 py-2 font-medium">Key</th>
                       <th className="px-2 py-2 font-medium">Summary</th>
                       <th className="px-2 py-2 font-medium">Status</th>
@@ -237,7 +295,26 @@ export default function Issues() {
                     {results.map((i) => {
                       const assignee = data.getEmployee(i.assigneeId);
                       return (
-                        <tr key={i.id} className="border-b border-border last:border-b-0 hover:bg-surface-muted/60">
+                        <tr
+                          key={i.id}
+                          className={cn("border-b border-border last:border-b-0 hover:bg-surface-muted/60", selected.has(i.id) && "bg-primary-soft/50")}
+                        >
+                          <td className="py-2 pl-4">
+                            <input
+                              type="checkbox"
+                              aria-label={`Select ${i.key}`}
+                              checked={selected.has(i.id)}
+                              onChange={(e) =>
+                                setSelected((s) => {
+                                  const next = new Set(s);
+                                  if (e.target.checked) next.add(i.id);
+                                  else next.delete(i.id);
+                                  return next;
+                                })
+                              }
+                              className="h-4 w-4 accent-primary"
+                            />
+                          </td>
                           <td className="whitespace-nowrap px-4 py-2">
                             <Link to={`/browse/${i.key}`} className="flex items-center gap-2 font-mono text-xs hover:text-primary">
                               <TypeIcon type={i.type} /> {i.key}
@@ -318,5 +395,39 @@ function FilterSelect({ label, value, onChange, options, extra, children }) {
       ))}
       {children}
     </Select>
+  );
+}
+
+function BulkSelect({ label, options, onPick, disabled }) {
+  return (
+    <Select
+      value=""
+      disabled={disabled}
+      onChange={(e) => e.target.value && onPick(e.target.value)}
+      className="h-8 w-auto bg-surface text-sm"
+      aria-label={label}
+    >
+      <option value="">{label}…</option>
+      {options.map(([value, text]) => (
+        <option key={value} value={value}>
+          {text}
+        </option>
+      ))}
+    </Select>
+  );
+}
+
+function BulkSprintSelect({ projectKey, onPick, disabled }) {
+  const [sprints, setSprints] = useState([]);
+  useEffect(() => {
+    api.getSprints(projectKey).then((s) => setSprints(s.filter((x) => x.state !== "closed")), () => setSprints([]));
+  }, [projectKey]);
+  return (
+    <BulkSelect
+      label="Move to"
+      disabled={disabled}
+      onPick={onPick}
+      options={[["backlog", "Backlog"], ...sprints.map((s) => [s.id, s.name + (s.state === "active" ? " (active)" : "")])]}
+    />
   );
 }

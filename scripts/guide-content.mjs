@@ -8,13 +8,15 @@ export const DEFAULTS = {
     earned: { perMonth: 1.5, annualCap: 18 },
     casual: { perMonth: 7 / 12, annualCap: 7 },
     sick: { perMonth: 7 / 12, annualCap: 7 },
+    menstrual: { perMonth: 1, annualCap: 12 },
   },
+  leaveAllowances: { optional: 2, marriage: 5, paternity: 5, lwp: 15 },
   probationMonths: 6,
   leaveAllowedDuringProbation: false,
-  wfhWeeklyQuota: 2,
-  wfhProbationMonthlyQuota: 2,
-  checkInByMinutes: 10 * 60 + 30,
-  checkOutFromMinutes: 18 * 60 + 30,
+  checkInByMinutes: 10 * 60,
+  checkOutFromMinutes: 19 * 60,
+  checkInOpensMinutesBefore: 45,
+  weeklyOffDays: [0, 6],
   enforceLateCheckIn: false,
   emergencyExceptionsPerMonth: 2,
 };
@@ -37,14 +39,21 @@ function days(n) {
   return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2).replace(/0$/, "");
 }
 
+const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+function weekdays(list) {
+  const names = [...list].sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7)).map((d) => WEEKDAYS[d]);
+  return names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0] ?? "None";
+}
+
 function plural(n, one, many = `${one}s`) {
   return `${n} ${n === 1 ? one : many}`;
 }
 
 export function describeSettings(s) {
-  const accrual = s.leaveAccrual ?? DEFAULTS.leaveAccrual;
+  const accrual = { ...DEFAULTS.leaveAccrual, ...(s.leaveAccrual ?? {}) };
   const rate = (type) =>
-    `${days(accrual[type].perMonth)} days a month, up to ${days(accrual[type].annualCap)} a year`;
+    `${days(accrual[type].perMonth)} ${accrual[type].perMonth === 1 ? "day" : "days"} a month, up to ${days(accrual[type].annualCap)} a year`;
 
   const startMonth = MONTHS[(s.leaveYearStartMonth - 1) % 12];
   const endMonth = MONTHS[(s.leaveYearStartMonth + 10) % 12];
@@ -74,10 +83,13 @@ export function describeSettings(s) {
     probationLeaveShort: s.leaveAllowedDuringProbation
       ? "Can be availed"
       : "Accrues, but availed after confirmation",
-    wfhWeekly: `${plural(s.wfhWeeklyQuota, "day")} a week`,
-    wfhProbation:
-      s.wfhProbationMonthlyQuota === 0
-        ? "not available during probation"
-        : `${plural(s.wfhProbationMonthlyQuota, "day")} a month`,
+    opensAt: time(s.checkInByMinutes - (s.checkInOpensMinutesBefore ?? 45)),
+    weeklyOff: weekdays(s.weeklyOffDays ?? [0, 6]),
+    wfh: "With your manager's approval — there's no fixed number of days",
+    menstrual: rate("menstrual"),
+    otherLeave: (() => {
+      const a = { ...DEFAULTS.leaveAllowances, ...(s.leaveAllowances ?? {}) };
+      return `Optional holiday ${days(a.optional)}, marriage ${days(a.marriage)}, paternity ${days(a.paternity)}, leave without pay up to ${days(a.lwp)} — each per leave year`;
+    })(),
   };
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Sparkles, Sun, Moon, Plus, LoaderCircle } from "lucide-react";
 import { api } from "../lib/api";
+import { useAuth } from "../context/AuthContext";
 import { formatDate } from "../lib/date";
 import { TICKET_STATUSES, formatHHMM, formatMinutes } from "../data/work";
 import { TypeIcon, PriorityIcon } from "../components/issues/IssueIcons";
@@ -20,6 +21,7 @@ export default function MyDay() {
   const [day, setDay] = useState(null); // { date, plan, tickets }
   const [loadError, setLoadError] = useState(null);
   const { projects } = useProjects();
+  const { currentUser } = useAuth();
 
   useEffect(() => {
     api.getWorkDay().then(setDay, (err) => setLoadError(err.message));
@@ -145,6 +147,15 @@ export default function MyDay() {
           <ReviewCard plan={plan} />
           <p className="text-sm text-muted-foreground">
             Your day is closed.{" "}
+            {currentUser.policyExempt && (
+              <button
+                type="button"
+                onClick={async () => setDay(await api.reopenDay())}
+                className="mr-2 text-primary hover:underline"
+              >
+                Reopen (test account)
+              </button>
+            )}
             <Link to="/performance" className="text-primary hover:underline">
               See your performance over time →
             </Link>

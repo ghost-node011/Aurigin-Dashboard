@@ -39,6 +39,7 @@ export const api = {
   addEmployee: (input) => post("/employees", input),
   setWorkReporters: (employeeId, workReporterIds) =>
     patch(`/employees/${employeeId}/work-reporters`, { workReporterIds }),
+  setPolicyExempt: (employeeId, policyExempt) => patch(`/employees/${employeeId}/policy-exempt`, { policyExempt }),
   setProjectManager: (employeeId, canManageProjects) =>
     patch(`/employees/${employeeId}/project-manager`, { canManageProjects }),
   completeOnboarding: (employeeId) => patch(`/employees/${employeeId}/complete-onboarding`, {}),
@@ -61,6 +62,7 @@ export const api = {
 
   getOnboardingTasks: () => request("/onboarding-tasks"),
   updateOnboardingTask: (taskId, status) => patch(`/onboarding-tasks/${taskId}`, { status }),
+  updateOnboardingNote: (taskId, note) => patch(`/onboarding-tasks/${taskId}`, { note }),
 
   getKudos: () => request("/kudos"),
   addKudos: (input) => post("/kudos", input),
@@ -83,6 +85,7 @@ export const api = {
   addIssue: (input) => post("/issues", input),
   updateIssue: (ref, input) => patch(`/issues/${ref}`, input),
   deleteIssue: (ref) => request(`/issues/${ref}`, { method: "DELETE" }),
+  bulkUpdateIssues: (issueIds, changes) => post("/issues/bulk", { issueIds, changes }),
   rankIssues: (issueIds, sprintId) => post("/issues/rank", { issueIds, ...(sprintId !== undefined && { sprintId }) }),
   watchIssue: (ref, watch) => post(`/issues/${ref}/watch`, { watch }),
   addIssueLink: (ref, type, issueKey) => post(`/issues/${ref}/links`, { type, issueKey }),
@@ -100,6 +103,7 @@ export const api = {
   updateSprint: (id, input) => patch(`/sprints/${id}`, input),
   startSprint: (id, input) => post(`/sprints/${id}/start`, input),
   completeSprint: (id, moveTo) => post(`/sprints/${id}/complete`, { moveTo }),
+  getSprintReport: (id) => request(`/sprints/${id}/report`),
   deleteSprint: (id) => request(`/sprints/${id}`, { method: "DELETE" }),
 
   getFilters: () => request("/filters"),
@@ -108,10 +112,14 @@ export const api = {
 
   getUploadSignature: () => request("/uploads/signature"),
 
+  getNotifications: () => request("/notifications"),
+  markNotificationsRead: (ids) => post("/notifications/read", ids ? { ids } : { all: true }),
+
   getWorkDay: (employeeId, date) =>
     request(`/work/day?${new URLSearchParams({ ...(employeeId && { employeeId }), ...(date && { date }) })}`),
   planDay: (overview, projectKey) => post("/work/day/plan", { overview, ...(projectKey && { projectKey }) }),
   closeDay: (summary) => post("/work/day/close", { summary }),
+  reopenDay: () => post("/work/day/reopen", {}),
   getPerformance: (employeeId, days = 30) =>
     request(`/work/performance?${new URLSearchParams({ ...(employeeId && { employeeId }), days })}`),
 };

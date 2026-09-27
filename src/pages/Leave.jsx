@@ -38,7 +38,8 @@ export default function Leave() {
   // Handbook §6.4 — leave accrues during probation but is availed only
   // after confirmation. The backend refuses it either way; disabling the
   // button here just avoids offering an action that can't succeed.
-  const onProbation = isOnProbation(currentUser) && !data.settings.leaveAllowedDuringProbation;
+  const onProbation =
+    isOnProbation(currentUser) && !data.settings.leaveAllowedDuringProbation && !currentUser.policyExempt;
   const { leaveAccrual: accrual, leaveAllowances: allowances } = data.settings;
 
   return (
@@ -163,7 +164,7 @@ export default function Leave() {
         <ApprovalsTab currentUser={currentUser} data={data} />
       )}
 
-      <ApplyLeaveModal open={applyOpen} onClose={() => setApplyOpen(false)} employeeId={currentUser.id} onSubmit={data.applyLeave} />
+      <ApplyLeaveModal exempt={Boolean(currentUser.policyExempt)} open={applyOpen} onClose={() => setApplyOpen(false)} employeeId={currentUser.id} onSubmit={data.applyLeave} />
     </div>
   );
 }
@@ -257,7 +258,7 @@ function ApprovalsTab({ currentUser, data }) {
   );
 }
 
-function ApplyLeaveModal({ open, onClose, employeeId, onSubmit }) {
+function ApplyLeaveModal({ open, onClose, employeeId, onSubmit, exempt }) {
   const [type, setType] = useState(LEAVE_TYPES[0].id);
   const [startDate, setStartDate] = useState(todayISO());
   const [endDate, setEndDate] = useState(todayISO());
@@ -269,7 +270,7 @@ function ApplyLeaveModal({ open, onClose, employeeId, onSubmit }) {
   const days = startDate && endDate && endDate >= startDate ? daysBetweenInclusive(startDate, endDate) : 0;
   // Handbook §6.5–6.6 notice, measured from today to the first day off.
   const notice = requiredNoticeDays(type, days);
-  const shortNotice = days > 0 && daysBetweenInclusive(todayISO(), startDate) - 1 < notice;
+  const shortNotice = !exempt && days > 0 && daysBetweenInclusive(todayISO(), startDate) - 1 < notice;
   const canSubmit = days > 0 && reason.trim().length > 0 && (!shortNotice || emergency) && !busy;
   const selected = LEAVE_TYPES.find((t) => t.id === type);
 

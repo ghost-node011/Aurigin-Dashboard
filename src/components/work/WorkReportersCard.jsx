@@ -61,6 +61,29 @@ export function WorkReportersCard({ employee, canManage, isAdmin }) {
         performance.
       </p>
 
+      {isAdmin && employee.role !== "admin" && (
+        <label className="mt-4 flex items-start gap-2 border-t border-border pt-4 text-sm">
+          <input
+            type="checkbox"
+            checked={Boolean(employee.policyExempt)}
+            disabled={pmBusy}
+            onChange={async (e) => {
+              setPmBusy(true);
+              try {
+                await data.setPolicyExempt(employee.id, e.target.checked);
+              } finally {
+                setPmBusy(false);
+              }
+            }}
+            className="mt-0.5 h-4 w-4 accent-primary"
+          />
+          <span>
+            Test account — check-in hours, weekends and leave rules don't apply
+            <span className="block text-xs text-muted-foreground">For trying every flow. Don't use for a real employee.</span>
+          </span>
+        </label>
+      )}
+
       {(isAdmin || employee.canManageProjects) && employee.role !== "admin" && (
         <label className="mt-4 flex items-center gap-2 border-t border-border pt-4 text-sm">
           <input

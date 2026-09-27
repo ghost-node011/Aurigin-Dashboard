@@ -1,5 +1,5 @@
-// Generates public/aurigin-people-guide.pdf — the introduction handed to
-// new employees, managers, HR and admins when they get portal access.
+// Generates the role guides in public/ (employee, HR, admin) — the
+// introduction handed to people when they get portal access.
 //
 // Generated rather than hand-designed so the numbers in it (leave accrual,
 // probation length, working hours) can be regenerated from the company's
@@ -293,8 +293,8 @@ const SECTIONS = {
       body: "Every leave and WFH request goes to the right approver with a clear status — Pending, Approved or Rejected — and the approver's comment comes back with it.",
     });
     y = card(doc, y, {
-      title: "The team, visible",
-      body: "A directory and org chart so you can find who does what and who to ask — useful in your first week, and after it.",
+      title: "Your work, planned with you",
+      body: "Tell My Day what you're working on and it builds your to-do list and timeline; wrap up at the end of the day and it closes what's done. Every task is an issue on the team's boards, Jira-style.",
     });
     return card(doc, y, {
       tone: "accent",
@@ -312,7 +312,7 @@ const SECTIONS = {
     y = step(doc, y, 1, "Sign in", "Go to the portal and sign in with your work email and the temporary password HR gave you.");
     y = step(doc, y, 2, "Set your own password", "You'll be asked to change it straight away. Pick something only you know — HR can't see it, and nobody can recover it for you.");
     y = step(doc, y, 3, "Read the handbook", "New joiners are walked through the Employee Handbook and asked to acknowledge it. Read to the last page — the acknowledge button unlocks there.");
-    y = step(doc, y, 4, "Check in", `On the Attendance page, press Check in. That's your day recorded. Press Check out when you finish — office hours are ${s.hours}.`);
+    y = step(doc, y, 4, "Check in, then plan your day", `On the Attendance page, press Check in (it opens at ${s.opensAt}; office hours are ${s.hours}). Then open My Day and write what you're working on — it turns that into your plan.`);
     return card(doc, y + 4, {
       tone: "brand",
       title: "Forgotten your password?",
@@ -325,17 +325,17 @@ const SECTIONS = {
     y = card(doc, y, {
       title: "Attendance",
       badge: s.hours,
-      body: `Check in when you start and out when you finish. ${s.lateRule} What matters is the other end of the day: leaving before ${s.checkOutFrom} is flagged. Nothing is refused — the day is still recorded — and if something genuinely came up you can mark it as an emergency, ${s.emergencies} a month.`,
+      body: `Check in when you start and out when you finish. Check-in opens at ${s.opensAt} and closes at ${s.checkOutFrom}, and it's closed on ${s.weeklyOff}. ${s.lateRule} Leaving before ${s.checkOutFrom} is flagged — the day is still recorded — and if something genuinely came up you can mark it as an emergency, ${s.emergencies} a month.`,
     });
     y = card(doc, y, {
       title: "Leave",
       badge: s.leaveYear,
-      body: `Leave is earned month by month rather than handed over as a yearly lump, so your balance is what you've actually accrued. ${s.leaveSummary} Apply from the Leave page; it goes to your manager, and you'll see the outcome there.`,
+      body: `Earned, casual, sick and menstrual leave build up month by month, so your balance is what you've actually accrued. ${s.leaveSummary} Earned leave needs 7 days' notice; casual needs 2, or a week for more than 2 days — inside that, tick "genuine emergency". Your manager is emailed, and you're emailed when they decide.`,
     });
     y = card(doc, y, {
       title: "Working from home",
-      badge: s.wfhWeekly,
-      body: "Planned WFH is a request — raise it before the day so your manager can approve it. For a same-day emergency, “Mark WFH” on the Attendance page records it immediately. Remote work is an arrangement, not an automatic entitlement.",
+      badge: "Manager approval",
+      body: "There's no fixed allowance — each day is agreed with your manager. Raise a request before the day and your manager is emailed; you're emailed when it's decided. For a same-day emergency, “Mark WFH” on the Attendance page records it immediately and lets your manager know.",
     });
     return card(doc, y, {
       tone: "accent",
@@ -351,12 +351,12 @@ const SECTIONS = {
       intro: `New joiners start on probation — ${s.probation} by default. It's the settling-in period, and a couple of things work differently while it lasts.`,
     });
     y = bullet(doc, y, `Leave still accrues every month, so nothing is lost. ${s.probationLeave}`);
-    y = bullet(doc, y, `Work from home is limited to ${s.wfhProbation} during probation.`);
+    y = bullet(doc, y, "Work from home works as it does for everyone — agreed with your manager, day by day.");
     y = bullet(doc, y, "Everything else — attendance, recognition, the directory, the handbook — works exactly as it does for everyone.");
     return card(doc, y + 6, {
       tone: "brand",
       title: "Being confirmed",
-      body: "Confirmation isn't automatic when the date passes — HR confirms you deliberately, after a look at how things have gone. Once confirmed, the full leave and work-from-home entitlements apply from that moment.",
+      body: "Confirmation isn't automatic when the date passes — HR confirms you deliberately, after a look at how things have gone. Once confirmed, the leave you've built up can be taken from that moment.",
     });
   },
 
@@ -368,7 +368,7 @@ const SECTIONS = {
     });
     y = card(doc, y, {
       title: "Leave and WFH approvals",
-      body: "Requests from your reports appear under Approvals on the Leave and Attendance pages. Approve or reject with a comment — the comment is what the person sees, so it's worth a sentence.",
+      body: "You're emailed (and see it under the bell) when someone reporting to you asks for leave or WFH. Approve or reject under Approvals on the Leave and Attendance pages — the person is emailed the decision with your comment, so it's worth a sentence.",
     });
     y = card(doc, y, {
       title: "Your team's attendance",
@@ -389,7 +389,7 @@ const SECTIONS = {
     });
     y = card(doc, y, {
       title: "Adding someone",
-      body: "Add an employee from the Onboarding page. The portal creates their account and a one-time temporary password — shown once, so copy it before you close the dialog — and builds their onboarding checklist automatically.",
+      body: "Add an employee from the Onboarding page — give their company email, or let the portal make one. It creates the account and a one-time temporary password (shown once, so copy it before closing), builds their onboarding checklist, and sets the administrator as their manager unless you pick one.",
     });
     y = card(doc, y, {
       title: "Probation and confirmation",
@@ -407,10 +407,10 @@ const SECTIONS = {
       title: "Changing the rules themselves",
       intro: "Under Settings, the policy numbers are yours to change. A change applies to everyone immediately, and leave balances are recalculated on the spot.",
     });
-    y = bullet(doc, y, "Leave accrual — days per month and the yearly cap, per leave type, plus the month the leave year starts.");
+    y = bullet(doc, y, "Leave — days per month and the yearly cap for earned, casual, sick and menstrual leave; the days a year for optional holidays, marriage, paternity and leave without pay; and the month the leave year starts.");
     y = bullet(doc, y, `Probation — default length (currently ${s.probation}) and whether leave can be availed during it.`);
-    y = bullet(doc, y, `Work from home — days per week once confirmed (${s.wfhWeekly}) and days per month on probation.`);
-    y = bullet(doc, y, `Office hours — start and end times (${s.hours}), whether late arrivals are flagged at all, and how many emergency exceptions a month.`);
+    y = bullet(doc, y, `Office hours — start and end (${s.hours}), how early check-in opens (now ${s.opensAt}), whether late arrivals are flagged, and how many emergency exceptions a month.`);
+    y = bullet(doc, y, "Notice periods, the 15-day earned-leave stretch and carry-forward come from the Employee Handbook and aren't editable here.");
     y += 6;
     y = card(doc, y, {
       tone: "accent",
@@ -424,6 +424,139 @@ const SECTIONS = {
     });
   },
 
+  myDay: (doc) => {
+    let y = newPage(doc, {
+      eyebrow: "My Day",
+      title: "Plan in the morning, wrap up before you leave",
+      intro: "My Day turns a few plain sentences into your to-do list and timeline, and at the end of the day closes what got done. Your work reporters — the administrator, your manager and anyone HR adds — see a short digest of both.",
+    });
+    y = step(doc, y, 1, "Morning: write your overview", "After the morning discussion, write what you'll work on the way you'd say it — “Fix the leave-page date bug, review Dhruv's PR, then start the onboarding emails.” Press Create my plan.");
+    y = step(doc, y, 2, "The AI builds your plan", "Each piece of work becomes an issue with a priority and a time slot across the rest of your day, filed into the project it belongs to. You can pick one project for everything instead. Unfinished work from earlier days is picked up, not duplicated.");
+    y = step(doc, y, 3, "During the day", "Change a task's status from the timeline, or open it to add detail, files or comments. Something new came up? Add more work — it's scheduled after what's already there.");
+    y = step(doc, y, 4, "Evening: write your summary", "Before you leave, say what got done, what's half done, what blocked you and roughly how long things took. Press Close my day — the AI marks each task Done, In Progress, In Review, Blocked or To Do, logs the time, and reviews your day.");
+    return card(doc, y + 2, {
+      tone: "accent",
+      title: "The review, and Performance",
+      body: "You get a score out of 10, what went well, what to improve and a short note. It's stored day by day under Performance — you see yours; your manager, work reporters and HR see it too. Blockers outside your control aren't held against you, so mention them.",
+    });
+  },
+
+  workIssues: (doc) => {
+    let y = newPage(doc, {
+      eyebrow: "Work",
+      title: "Issues: every piece of work, in one place",
+      intro: "Work lives in projects, each with its own key — WEB-12 is issue 12 in the Website project. Tasks from My Day are issues too, so everything shows up on the boards and in search.",
+    });
+    y = card(doc, y, {
+      tone: "brand",
+      title: "Types and status",
+      body: "An Epic is a big piece of work holding Stories, Tasks and Bugs; any of those can be split into Sub-tasks. Status moves To Do → In Progress → In Review → Done, with Blocked for when something outside the issue is in the way.",
+    });
+    y = card(doc, y, {
+      title: "The issue page",
+      body: "Open any issue at /browse/KEY. Click the title or description to edit. Alongside: assignee, reporters, priority, labels, story points, sprint, epic, due date, and time tracking — the estimate, time logged and what's left. Log work as you go (“1h 30m”).",
+    });
+    y = card(doc, y, {
+      title: "Comments, mentions and files",
+      body: "Comment underneath; type @ and pick a name to mention someone — they're emailed and start watching. Attach images and files (up to 25 MB each) to the issue or to a comment. Watch an issue with the eye button to follow it.",
+    });
+    return card(doc, y, {
+      title: "Links and history",
+      body: "Link related issues — blocks, relates to, duplicates, clones — and both sides show the link. The History and Work log tabs record every change and every hour logged, with who and when.",
+    });
+  },
+
+  workBoards: (doc) => {
+    let y = newPage(doc, {
+      eyebrow: "Work",
+      title: "Boards, backlog and search",
+      intro: "Pick a project at the top of each page; the portal remembers your choice.",
+    });
+    y = card(doc, y, {
+      title: "Board",
+      body: "Columns by status. Drag a card to move it. With a sprint running, the board shows that sprint; without one, it shows all open work. Filter to your own issues, recently updated or a label, and group by assignee or epic.",
+    });
+    y = card(doc, y, {
+      title: "Backlog",
+      body: "Upcoming work in priority order, with sprints above it. Drag issues up and down to reorder, or into a sprint to plan it. Type in the Create issue row for a quick task, or use Create for the full form.",
+    });
+    y = card(doc, y, {
+      title: "Issues search",
+      body: "Every issue in one table, filtered by project, type, status, priority, assignee, reporter, label, sprint or text. Filters live in the address, so a search can be shared as a link, or saved — privately or for everyone. Built-in filters cover “My open issues”, “Watching” and more.",
+    });
+    return card(doc, y, {
+      tone: "brand",
+      title: "The bell and your inbox",
+      body: "The bell in the header lists what needs your attention — new issues where you're assignee or reporter, assignments, status changes, comments and mentions, leave and WFH requests and decisions. The same things arrive by email, with a button straight to the right page.",
+    });
+  },
+
+  leadingWork: (doc) => {
+    let y = newPage(doc, {
+      eyebrow: "Leading work",
+      title: "Sprints, reporters and your team's days",
+      intro: "Managers, HR and admins — plus each project's lead and anyone made a project manager — run sprints. Everyone overseeing someone's work sees their days and performance.",
+    });
+    y = card(doc, y, {
+      title: "Work reporters",
+      body: "The administrator and each person's manager oversee their work automatically. HR can add others on the employee's profile (Work reporters). Reporters are on every issue planned for that person, get their daily digest, and can see their My Day and Performance.",
+    });
+    y = card(doc, y, {
+      title: "Running a sprint",
+      body: "In the backlog, Create sprint, drag issues in, then Start sprint — pick one to four weeks and a goal. One sprint runs at a time per project. Complete sprint from the board or backlog; unfinished work moves to the backlog, the next sprint or a new one.",
+    });
+    y = card(doc, y, {
+      title: "Sprint report",
+      body: "Sprint reports (from the board or backlog) show what was done and what wasn't, with a burndown: remaining work each day against the ideal straight line — in story points when issues have them, otherwise in issues.",
+    });
+    return card(doc, y, {
+      title: "Bulk edit, and your team's performance",
+      body: "On Issues, tick rows (or all) and set status, priority, assignee or sprint in one go. On Performance, pick a person to see their daily scores, what they planned and what they reported.",
+    });
+  },
+
+  onboardingChecklist: (doc) => {
+    let y = newPage(doc, {
+      eyebrow: "Onboarding",
+      title: "The new-hire checklist",
+      intro: "Every new hire gets twelve tasks — welcome, documentation, IT setup, training and culture. Each task has an owner, and only its owner can tick it.",
+    });
+    y = bullet(doc, y, "The new hire ticks their own tasks — meeting the team and acknowledging the handbook happen in their welcome flow.");
+    y = bullet(doc, y, "HR ticks the HR and IT tasks: documents, payroll details, laptop, accounts, buddy and welcome kit.");
+    y = bullet(doc, y, "The new hire's manager ticks the training tasks: tools training and the 1:1 kickoff.");
+    y = bullet(doc, y, "Anyone else sees the checklist but can't change it.");
+    y = card(doc, y + 6, {
+      tone: "brand",
+      title: "Notes on each task",
+      body: "Add a note when you update a task — “Offer letter signed 28 Sep”, “Dell Latitude, S/N …”, “Buddy: Dhruv”. It shows with who updated it and when. Keep the documents themselves where HR keeps them today: the portal records that something was done, not ID numbers or bank details.",
+    });
+    return card(doc, y, {
+      title: "Finishing onboarding",
+      body: "When every task is done, Mark active on the new hire's card. They stop seeing the onboarding checklist and carry on as a regular employee.",
+    });
+  },
+
+  adminPowers: (doc) => {
+    let y = newPage(doc, {
+      eyebrow: "Admin only",
+      title: "Permissions that are yours to grant",
+      intro: "A few switches on an employee's profile are admin-only, because they change what someone can do across the portal.",
+    });
+    y = card(doc, y, {
+      title: "Project managers",
+      body: "Only admins and project managers create, edit and archive projects. Tick Project manager on someone's profile to let them. Everyone can still create and work on issues inside existing projects, and each project's lead can edit it.",
+    });
+    y = card(doc, y, {
+      tone: "accent",
+      title: "Test accounts",
+      body: "Tick Test account on a profile and check-in hours, weekends and leave rules (probation, notice, balance) stop applying to that account — and a closed My Day can be reopened. It's for trying every flow at any time. Never use it for a real employee.",
+    });
+    return card(doc, y, {
+      title: "Where the AI and email come from",
+      body: "Planning and reviews use Groq's gpt-oss-120b model; email goes from auriginmedia@gmail.com. Both are configured on the server. If either is unavailable, the portal keeps working — plans fall back to one task per line, and emails are skipped rather than failing the action.",
+    });
+  },
+
   reference: (doc, s) => {
     const y = newPage(doc, {
       eyebrow: "Reference",
@@ -434,7 +567,7 @@ const SECTIONS = {
       doc,
       y,
       [
-        ["Office hours", s.hours],
+        ["Office hours", `${s.hours}; check-in opens ${s.opensAt}, closed ${s.weeklyOff}`],
         ["Arriving late", s.lateRuleShort],
         ["Leaving early", `Before ${s.checkOutFrom} is flagged`],
         ["Emergency exceptions", `${s.emergencies} per calendar month`],
@@ -442,10 +575,12 @@ const SECTIONS = {
         ["Earned leave", s.earned],
         ["Casual leave", s.casual],
         ["Sick leave", s.sick],
+        ["Menstrual leave", s.menstrual],
+        ["Other leave", s.otherLeave],
+        ["Notice for leave", "Earned 7 days; casual 2 days (a week for more than 2). Inside that: mark it an emergency"],
         ["Probation", `${s.probation} by default; confirmation is a manual HR step`],
         ["Leave on probation", s.probationLeaveShort],
-        ["Work from home", `${s.wfhWeekly} once confirmed`],
-        ["WFH on probation", s.wfhProbation],
+        ["Work from home", s.wfh],
       ],
       ["What", "How it works"],
     );
@@ -483,7 +618,8 @@ const SECTIONS = {
 const EMPLOYEE_HELP = (s) => [
   `Leave balance looks wrong? It's accrued to date, not your yearly total — a new joiner sees a small number on purpose. If it still looks off, ask HR.`,
   "Can't apply for leave? Check whether you're still on probation; your Leave page will say so.",
-  "WFH request refused by the portal? You may have used the allowance for the week or month.",
+  `Check In greyed out? It opens at ${s.opensAt}, closes at ${s.checkOutFrom} and is off on ${s.weeklyOff}.`,
+  "My Day planned something oddly? Edit or move any task on the board — the plan is a starting point, not a contract.",
   `Forgot to check out? Tell your manager — the day stays open, and an open day reads as leaving before ${s.checkOutFrom}.`,
   "Anything about pay, contracts or personal records: HR, not the portal.",
 ];
@@ -497,12 +633,12 @@ const AUDIENCES = {
     coverLine1: "Everything you need to start,",
     coverLine2: "in about five minutes.",
     coverBlurb:
-      "Written for everyone at Aurigin Media — checking in, asking for leave, working from home, and knowing who to ask.",
+      "Written for everyone at Aurigin Media — checking in, planning your day, working with issues, asking for leave, and knowing who to ask.",
     footer: "employee guide",
     welcomeTitle: "This is where the admin lives, so your work doesn't have to",
     welcomeIntro:
       "Aurigin People is our internal HR portal. It replaces the spreadsheets and the “quick question on WhatsApp” for the things that happen every week — marking attendance, asking for leave, working from home, and knowing where a request has got to.",
-    sections: ["welcome", "gettingStarted", "everyday", "probation", "reference", "help"],
+    sections: ["welcome", "gettingStarted", "everyday", "myDay", "workIssues", "workBoards", "probation", "reference", "help"],
     helpLines: EMPLOYEE_HELP,
     whoToAsk:
       "Your reporting manager for day-to-day approvals and anything about your work. HR for accounts, policy, records and pay. The org chart in the portal will tell you who's who.",
@@ -522,7 +658,10 @@ const AUDIENCES = {
     welcomeTitle: "The portal does the admin, so you can do the people part",
     welcomeIntro:
       "Aurigin People holds the records, the requests and the rules. This guide covers what everyone sees, then the parts only HR and admins can reach — adding employees, managing probation, and changing policy.",
-    sections: ["welcome", "gettingStarted", "everyday", "probation", "managing", "running", "settings", "reference", "help"],
+    sections: [
+      "welcome", "gettingStarted", "everyday", "myDay", "workIssues", "workBoards", "probation",
+      "managing", "leadingWork", "running", "onboardingChecklist", "settings", "reference", "help",
+    ],
     helpLines: (s) => [
       ...EMPLOYEE_HELP(s),
       "Someone can't apply for leave and shouldn't be blocked? Check their probation status on their profile, or the probation rule under Settings.",
@@ -546,7 +685,10 @@ const AUDIENCES = {
     welcomeTitle: "You can see everything, and change most of it",
     welcomeIntro:
       "An admin account has the widest view in Aurigin People: every employee, every request, and the policy settings the whole company runs on. This guide covers what everyone sees first, then everything that's yours alone.",
-    sections: ["welcome", "gettingStarted", "everyday", "probation", "managing", "running", "settings", "reference", "help"],
+    sections: [
+      "welcome", "gettingStarted", "everyday", "myDay", "workIssues", "workBoards", "probation",
+      "managing", "leadingWork", "running", "onboardingChecklist", "settings", "adminPowers", "reference", "help",
+    ],
     helpLines: (s) => [
       ...EMPLOYEE_HELP(s),
       "Balances changed unexpectedly for everyone? Someone edited the accrual rates under Settings — they apply immediately and recalculate on the spot.",

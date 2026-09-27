@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
-import { Bell, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
+import { NotificationBell } from "./NotificationBell";
 import { Sidebar } from "./Sidebar";
 import { ThemeToggle } from "./ThemeToggle";
 import { WelcomeFlow } from "./onboarding/WelcomeFlow";
@@ -49,14 +50,7 @@ export function AppLayout() {
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <ThemeToggle />
-            <button
-              type="button"
-              className="relative grid h-9 w-9 place-items-center rounded-full text-muted-foreground hover:bg-surface-muted"
-              aria-label="Notifications"
-            >
-              <Bell className="h-4.5 w-4.5" />
-              <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-danger" />
-            </button>
+            <NotificationBell />
           </div>
         </header>
         <main className="flex-1 overflow-y-auto">

@@ -81,7 +81,11 @@ export default function Onboarding() {
         <Card title="Your onboarding checklist">
           <ChecklistByCategory
             plan={myPlan}
+            hire={currentUser}
+            viewer={currentUser}
+            getEmployee={data.getEmployee}
             onToggle={(taskId, status) => data.updateOnboardingTask(currentUser.id, taskId, status)}
+            onNote={data.updateOnboardingNote}
           />
         </Card>
       )}
@@ -116,7 +120,14 @@ export default function Onboarding() {
                   </div>
                 }
               >
-                <ChecklistByCategory plan={plan} onToggle={(taskId, status) => data.updateOnboardingTask(id, taskId, status)} />
+                <ChecklistByCategory
+                  plan={plan}
+                  hire={employee}
+                  viewer={currentUser}
+                  getEmployee={data.getEmployee}
+                  onToggle={(taskId, status) => data.updateOnboardingTask(id, taskId, status)}
+                  onNote={data.updateOnboardingNote}
+                />
               </Card>
             );
           })}
@@ -280,9 +291,29 @@ function AddNewHireModal({ open, onClose, employees, onSubmit }) {
   );
 }
 
-function ChecklistByCategory({ plan, onToggle }) {
+const OWNER_LABEL = { self: "You", hr: "HR", it: "IT (HR)", manager: "Manager" };
+
+/** Mirrors the server: who may update a task, by its owner. */
+function canUpdateTask(task, hire, viewer) {
+  if (["admin", "hr"].includes(viewer.role)) return true;
+  if (task.owner === "self") return hire.id === viewer.id;
+  if (task.owner === "manager") return hire.managerId === viewer.id;
+  return hire.id === viewer.id && Boolean(viewer.policyExempt);
+}
+
+function ChecklistByCategory({ plan, hire, viewer, getEmployee, onToggle, onNote }) {
   const done = plan.filter((t) => t.status === "Done").length;
   const pct = Math.round((done / plan.length) * 100);
+  const [error, setError] = useState(null);
+
+  const guard = (fn) => async (...args) => {
+    setError(null);
+    try {
+      await fn(...args);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
 
   return (
     <div>
@@ -292,6 +323,7 @@ function ChecklistByCategory({ plan, onToggle }) {
         </div>
         <span className="shrink-0 text-sm font-medium">{pct}%</span>
       </div>
+      {error && <p className="mb-3 text-sm text-danger">{error}</p>}
 
       <div className="space-y-5">
         {CATEGORIES.map((category) => {
@@ -302,7 +334,15 @@ function ChecklistByCategory({ plan, onToggle }) {
               <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">{category}</p>
               <div className="space-y-1.5">
                 {tasks.map((task) => (
-                  <TaskRow key={task.id} task={task} onClick={() => onToggle(task.id, NEXT_STATUS[task.status])} />
+                  <TaskRow
+                    key={task.id}
+                    task={task}
+                    ownerLabel={task.owner === "self" && hire.id !== viewer.id ? "New hire" : OWNER_LABEL[task.owner]}
+                    allowed={canUpdateTask(task, hire, viewer)}
+                    updatedBy={task.updatedBy ? getEmployee(task.updatedBy) : null}
+                    onClick={guard(() => onToggle(task.id, NEXT_STATUS[task.status]))}
+                    onNote={guard((note) => onNote(task.id, note))}
+                  />
                 ))}
               </div>
             </div>
@@ -313,26 +353,81 @@ function ChecklistByCategory({ plan, onToggle }) {
   );
 }
 
-function TaskRow({ task, onClick }) {
+function TaskRow({ task, ownerLabel, allowed, updatedBy, onClick, onNote }) {
   const Icon = task.status === "Done" ? CheckCircle2 : task.status === "In Progress" ? Clock : Circle;
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(task.note ?? "");
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left transition hover:bg-surface-muted"
-    >
-      <Icon
-        className={cn(
-          "h-4 w-4 shrink-0",
-          task.status === "Done" && "text-success",
-          task.status === "In Progress" && "text-warning",
-          task.status === "Pending" && "text-muted-foreground",
+    <div className="rounded-lg px-2 py-1.5 transition hover:bg-surface-muted">
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={onClick}
+          disabled={!allowed}
+          title={allowed ? "Change status" : `Updated by ${ownerLabel}`}
+          className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:cursor-default"
+        >
+          <Icon
+            className={cn(
+              "h-4 w-4 shrink-0",
+              task.status === "Done" && "text-success",
+              task.status === "In Progress" && "text-warning",
+              task.status === "Pending" && "text-muted-foreground",
+            )}
+          />
+          <span className={cn("flex-1 text-sm", task.status === "Done" && "text-muted-foreground line-through")}>
+            {task.title}
+          </span>
+        </button>
+        <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">{ownerLabel}</span>
+        <Badge>{task.status}</Badge>
+      </div>
+      {(task.note || editing) && (
+        <div className="ml-7 mt-1">
+          {editing ? (
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                await onNote(draft);
+                setEditing(false);
+              }}
+              className="flex gap-2"
+            >
+              <Input
+                autoFocus
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                placeholder="e.g. Laptop issued: Dell Latitude, S/N …"
+                className="h-8 text-xs"
+              />
+              <Button size="sm" type="submit">
+                Save
+              </Button>
+            </form>
+          ) : (
+            <p className="text-xs text-muted-foreground">{task.note}</p>
+          )}
+        </div>
+      )}
+      <div className="ml-7 flex gap-3 text-[11px] text-muted-foreground">
+        {updatedBy && task.updatedAt && (
+          <span>
+            {updatedBy.name} · {new Date(task.updatedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+          </span>
         )}
-      />
-      <span className={cn("flex-1 text-sm", task.status === "Done" && "text-muted-foreground line-through")}>
-        {task.title}
-      </span>
-      <Badge>{task.status}</Badge>
-    </button>
+        {allowed && !editing && (
+          <button
+            type="button"
+            onClick={() => {
+              setDraft(task.note ?? "");
+              setEditing(true);
+            }}
+            className="text-primary hover:underline"
+          >
+            {task.note ? "Edit note" : "Add note"}
+          </button>
+        )}
+      </div>
+    </div>
   );
 }

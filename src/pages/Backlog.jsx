@@ -25,6 +25,7 @@ export default function Backlog() {
   const data = useHRData();
   const { projects, current, setProjectKey, error: projectError } = useProjects();
   const [sprints, setSprints] = useState(null);
+  const [reportSprintId, setReportSprintId] = useState(null);
   const [issues, setIssues] = useState(null);
   const [epics, setEpics] = useState([]);
   const [epicFilter, setEpicFilter] = useState(null);
@@ -46,6 +47,8 @@ export default function Backlog() {
         api.searchIssues({ project: current.key, sort: "rank" }),
       ]);
       setSprints(allSprints.filter((s) => s.state !== "closed"));
+      // The active sprint's report, else the most recently completed one.
+      setReportSprintId((allSprints.find((s) => s.state === "active") ?? allSprints.find((s) => s.state === "closed"))?.id ?? null);
       setEpics(all.filter((i) => i.type === "Epic"));
       // Jira's backlog lists top-level work; sub-tasks live on their parent.
       setIssues(all.filter((i) => i.type !== "Epic" && i.type !== "Sub-task"));
@@ -114,7 +117,12 @@ export default function Backlog() {
           <p className="text-sm text-muted-foreground">{current.name}</p>
           <h1 className="font-display text-3xl font-semibold">Backlog</h1>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {reportSprintId && (
+            <Link to={`/sprints/${reportSprintId}/report`} className="mr-1 text-sm text-primary hover:underline">
+              Sprint reports
+            </Link>
+          )}
           <Button
             variant="outline"
             onClick={async () => {

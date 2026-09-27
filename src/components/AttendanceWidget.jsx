@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { LogIn, LogOut as LogOutIcon, Home } from "lucide-react";
 import { useHRData } from "../context/HRDataContext";
+import { useAuth } from "../context/AuthContext";
 import { minutesToLabel } from "../data/attendance";
 import { Badge } from "./Badge";
 import { Button } from "./Button";
@@ -19,6 +20,7 @@ function nowIST() {
 
 export function AttendanceWidget({ record, onCheckIn, onCheckOut, onWFH }) {
   const { settings } = useHRData();
+  const { currentUser } = useAuth();
   const [now, setNow] = useState(nowIST);
   const [error, setError] = useState(null);
 
@@ -29,9 +31,12 @@ export function AttendanceWidget({ record, onCheckIn, onCheckOut, onWFH }) {
   }, []);
 
   const opensAt = settings.checkInByMinutes - (settings.checkInOpensMinutesBefore ?? 45);
-  const weeklyOff = (settings.weeklyOffDays ?? [0, 6]).includes(now.weekday);
-  const tooEarly = now.minutes < opensAt;
-  const closed = weeklyOff || tooEarly;
+  // Test accounts aren't held to the window, mirroring the server.
+  const exempt = Boolean(currentUser?.policyExempt);
+  const weeklyOff = !exempt && (settings.weeklyOffDays ?? [0, 6]).includes(now.weekday);
+  const tooEarly = !exempt && now.minutes < opensAt;
+  const tooLate = !exempt && now.minutes >= settings.checkOutFromMinutes;
+  const closed = weeklyOff || tooEarly || tooLate;
 
   async function run(action) {
     setError(null);
@@ -49,6 +54,8 @@ export function AttendanceWidget({ record, onCheckIn, onCheckOut, onWFH }) {
           <p className="text-sm text-muted-foreground">
             {weeklyOff
               ? "Today is a weekly holiday — no attendance to mark."
+              : tooLate
+              ? `Check-in is closed — office hours ended at ${minutesToLabel(settings.checkOutFromMinutes)}.`
               : tooEarly
               ? `Check-in opens at ${minutesToLabel(opensAt)} — office starts at ${minutesToLabel(settings.checkInByMinutes)}.`
               : "You haven't checked in yet today."}
