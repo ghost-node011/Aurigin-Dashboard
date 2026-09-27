@@ -154,6 +154,9 @@ function AddNewHireModal({ open, onClose, employees, onSubmit }) {
   const [employmentType, setEmploymentType] = useState(EMPLOYMENT_TYPES[0]);
   const [location, setLocation] = useState("");
   const [dateOfJoining, setDateOfJoining] = useState(todayISO());
+  const [email, setEmail] = useState("");
+  const [workReporterIds, setWorkReporterIds] = useState([]);
+  const admins = employees.filter((e) => e.role === "admin");
 
   const canSubmit = name.trim().length > 0 && title.trim().length > 0 && location.trim().length > 0;
 
@@ -165,6 +168,8 @@ function AddNewHireModal({ open, onClose, employees, onSubmit }) {
     setEmploymentType(EMPLOYMENT_TYPES[0]);
     setLocation("");
     setDateOfJoining(todayISO());
+    setEmail("");
+    setWorkReporterIds([]);
   }
 
   function handleSubmit(e) {
@@ -178,6 +183,8 @@ function AddNewHireModal({ open, onClose, employees, onSubmit }) {
       employmentType,
       location: location.trim(),
       dateOfJoining,
+      email: email.trim() || undefined,
+      workReporterIds,
     });
     reset();
   }
@@ -203,15 +210,48 @@ function AddNewHireModal({ open, onClose, employees, onSubmit }) {
           </Field>
           <Field label="Reports to">
             <Select value={managerId} onChange={(e) => setManagerId(e.target.value)}>
-              <option value="">No manager</option>
-              {employees.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.name}
-                </option>
-              ))}
+              <option value="">{admins[0] ? `${admins[0].name} (administrator)` : "No manager"}</option>
+              {employees
+                .filter((e) => e.id !== admins[0]?.id)
+                .map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.name}
+                  </option>
+                ))}
             </Select>
           </Field>
         </div>
+        <Field label="Company email">
+          <Input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Leave blank to generate one, e.g. jane.doe@auriginmedia.com"
+          />
+        </Field>
+        <Field label="Work reporters">
+          <div className="flex flex-wrap gap-x-4 gap-y-1.5 rounded-lg border border-border px-3 py-2">
+            {employees
+              .filter((e) => e.role !== "admin" && e.id !== managerId)
+              .map((e) => (
+                <label key={e.id} className="flex items-center gap-1.5 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={workReporterIds.includes(e.id)}
+                    onChange={(ev) =>
+                      setWorkReporterIds((ids) => (ev.target.checked ? [...ids, e.id] : ids.filter((id) => id !== e.id)))
+                    }
+                    className="h-4 w-4 accent-primary"
+                  />
+                  {e.name}
+                </label>
+              ))}
+          </div>
+        </Field>
+        <p className="-mt-2 text-xs text-muted-foreground">
+          The administrator and manager are always reporters on their tickets and day plans; tick anyone else who
+          should oversee their work.
+        </p>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Employment type" required>
             <Select value={employmentType} onChange={(e) => setEmploymentType(e.target.value)}>
@@ -230,7 +270,7 @@ function AddNewHireModal({ open, onClose, employees, onSubmit }) {
           <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Mumbai, IN" />
         </Field>
         <p className="text-xs text-muted-foreground">
-          A company email and the standard onboarding checklist are generated automatically.
+          The standard onboarding checklist and a temporary password are generated automatically.
         </p>
         <Button type="submit" disabled={!canSubmit} className="w-full">
           Create employee record

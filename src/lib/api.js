@@ -24,6 +24,9 @@ async function request(path, options = {}) {
   return res.json();
 }
 
+// Drops empty params so `?assignee=&status=` doesn't filter on "".
+const clean = (query) => Object.fromEntries(Object.entries(query).filter(([, v]) => v !== "" && v != null));
+
 const post = (path, body) => request(path, { method: "POST", body: JSON.stringify(body) });
 const patch = (path, body) => request(path, { method: "PATCH", body: JSON.stringify(body) });
 
@@ -34,6 +37,10 @@ export const api = {
 
   getEmployees: () => request("/employees"),
   addEmployee: (input) => post("/employees", input),
+  setWorkReporters: (employeeId, workReporterIds) =>
+    patch(`/employees/${employeeId}/work-reporters`, { workReporterIds }),
+  setProjectManager: (employeeId, canManageProjects) =>
+    patch(`/employees/${employeeId}/project-manager`, { canManageProjects }),
   completeOnboarding: (employeeId) => patch(`/employees/${employeeId}/complete-onboarding`, {}),
   setProbation: (employeeId, employmentStatus, probationEndDate) =>
     patch(`/employees/${employeeId}/probation`, { employmentStatus, probationEndDate }),
@@ -65,6 +72,48 @@ export const api = {
 
   getAnnouncements: () => request("/announcements"),
   addAnnouncement: (input) => post("/announcements", input),
+
+  getProjects: () => request("/projects"),
+  addProject: (input) => post("/projects", input),
+  updateProject: (key, input) => patch(`/projects/${key}`, input),
+
+  searchIssues: (query = {}) => request(`/issues?${new URLSearchParams(clean(query))}`),
+  getIssueLabels: () => request("/issues/labels"),
+  getIssue: (ref) => request(`/issues/${ref}`),
+  addIssue: (input) => post("/issues", input),
+  updateIssue: (ref, input) => patch(`/issues/${ref}`, input),
+  deleteIssue: (ref) => request(`/issues/${ref}`, { method: "DELETE" }),
+  rankIssues: (issueIds, sprintId) => post("/issues/rank", { issueIds, ...(sprintId !== undefined && { sprintId }) }),
+  watchIssue: (ref, watch) => post(`/issues/${ref}/watch`, { watch }),
+  addIssueLink: (ref, type, issueKey) => post(`/issues/${ref}/links`, { type, issueKey }),
+  removeIssueLink: (ref, linkId) => request(`/issues/${ref}/links/${linkId}`, { method: "DELETE" }),
+  addAttachments: (ref, attachments) => post(`/issues/${ref}/attachments`, { attachments }),
+  removeAttachment: (ref, attachmentId) => request(`/issues/${ref}/attachments/${attachmentId}`, { method: "DELETE" }),
+
+  getComments: (ref) => request(`/issues/${ref}/comments`),
+  addComment: (ref, body, attachments) => post(`/issues/${ref}/comments`, { body, attachments }),
+  updateComment: (id, body) => patch(`/comments/${id}`, { body }),
+  deleteComment: (id) => request(`/comments/${id}`, { method: "DELETE" }),
+
+  getSprints: (projectKey) => request(`/sprints?project=${projectKey}`),
+  addSprint: (projectKey, input = {}) => post("/sprints", { projectKey, ...input }),
+  updateSprint: (id, input) => patch(`/sprints/${id}`, input),
+  startSprint: (id, input) => post(`/sprints/${id}/start`, input),
+  completeSprint: (id, moveTo) => post(`/sprints/${id}/complete`, { moveTo }),
+  deleteSprint: (id) => request(`/sprints/${id}`, { method: "DELETE" }),
+
+  getFilters: () => request("/filters"),
+  addFilter: (input) => post("/filters", input),
+  deleteFilter: (id) => request(`/filters/${id}`, { method: "DELETE" }),
+
+  getUploadSignature: () => request("/uploads/signature"),
+
+  getWorkDay: (employeeId, date) =>
+    request(`/work/day?${new URLSearchParams({ ...(employeeId && { employeeId }), ...(date && { date }) })}`),
+  planDay: (overview, projectKey) => post("/work/day/plan", { overview, ...(projectKey && { projectKey }) }),
+  closeDay: (summary) => post("/work/day/close", { summary }),
+  getPerformance: (employeeId, days = 30) =>
+    request(`/work/performance?${new URLSearchParams({ ...(employeeId && { employeeId }), days })}`),
 };
 
 export { TOKEN_KEY };

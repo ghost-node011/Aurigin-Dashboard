@@ -10,6 +10,8 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY));
   const [currentUser, setCurrentUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [authError, setAuthError] = useState(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (!token) {
@@ -17,17 +19,35 @@ export function AuthProvider({ children }) {
       setAuthLoading(false);
       return;
     }
+    let cancelled = false;
     setAuthLoading(true);
-    api
-      .me()
-      .then(setCurrentUser)
-      .catch(() => {
-        localStorage.removeItem(TOKEN_KEY);
-        setToken(null);
-        setCurrentUser(null);
-      })
-      .finally(() => setAuthLoading(false));
-  }, [token]);
+    setAuthError(null);
+
+    // Only a 401 means the session is over, and `request` already clears
+    // the token and redirects for that. Anything else (the API cold-starting,
+    // a network blip, a timeout) must not log the user out, so it's retried
+    // a few times and then offered as "try again" with the token kept.
+    (async () => {
+      for (let i = 0; i < 3; i++) {
+        try {
+          const me = await api.me();
+          if (!cancelled) setCurrentUser(me);
+          return;
+        } catch (err) {
+          if (!localStorage.getItem(TOKEN_KEY)) return; // 401: token cleared, redirecting
+          if (i === 2) {
+            if (!cancelled) setAuthError(err.message || "Couldn't reach the server.");
+            return;
+          }
+          await new Promise((r) => setTimeout(r, 1500 * (i + 1)));
+        }
+      }
+    })().finally(() => !cancelled && setAuthLoading(false));
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, attempt]);
 
   async function login(email, password) {
     const { token: newToken, employee } = await api.login(email, password);
@@ -49,7 +69,9 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ currentUser, authLoading, login, logout, refreshCurrentUser }}>
+    <AuthContext.Provider
+      value={{ currentUser, authLoading, authError, retryAuth: () => setAttempt((n) => n + 1), login, logout, refreshCurrentUser }}
+    >
       {children}
     </AuthContext.Provider>
   );

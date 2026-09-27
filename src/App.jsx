@@ -15,6 +15,13 @@ import Announcements from "./pages/Announcements";
 import OrgChart from "./pages/OrgChart";
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
+import MyDay from "./pages/MyDay";
+import Board from "./pages/Board";
+import Performance from "./pages/Performance";
+import Backlog from "./pages/Backlog";
+import Issues from "./pages/Issues";
+import IssuePage from "./pages/IssuePage";
+import Projects from "./pages/Projects";
 
 export default function App() {
   return (
@@ -27,6 +34,13 @@ export default function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/directory" element={<Directory />} />
               <Route path="/directory/:id" element={<EmployeeProfile />} />
+              <Route path="/my-day" element={<MyDay />} />
+              <Route path="/board" element={<Board />} />
+              <Route path="/backlog" element={<Backlog />} />
+              <Route path="/issues" element={<Issues />} />
+              <Route path="/browse/:issueKey" element={<IssuePage />} />
+              <Route path="/projects" element={<Projects />} />
+              <Route path="/performance" element={<Performance />} />
               <Route path="/attendance" element={<Attendance />} />
               <Route path="/leave" element={<Leave />} />
               <Route path="/onboarding" element={<Onboarding />} />

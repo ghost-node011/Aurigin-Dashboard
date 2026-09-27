@@ -10,6 +10,7 @@ import { Avatar } from "../components/Avatar";
 import { Badge } from "../components/Badge";
 import { Card } from "../components/Card";
 import { ProbationCard } from "../components/ProbationCard";
+import { WorkReportersCard } from "../components/work/WorkReportersCard";
 
 function tenure(dateOfJoining) {
   const months = Math.max(
@@ -140,6 +141,12 @@ export default function EmployeeProfile() {
           {canViewSensitive && (
             <ProbationCard employee={employee} canManage={["admin", "hr"].includes(currentUser.role)} />
           )}
+
+          <WorkReportersCard
+            employee={employee}
+            canManage={["admin", "hr"].includes(currentUser.role)}
+            isAdmin={currentUser.role === "admin"}
+          />
 
           {canViewSensitive && (
             <Card title="Leave balance">

@@ -1,17 +1,20 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { Field, Input } from "../components/Input";
 import { Button } from "../components/Button";
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, currentUser, authLoading } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Already signed in (e.g. a bookmarked /login) — go straight in.
+  if (!authLoading && currentUser) return <Navigate to="/" replace />;
 
   async function handleSubmit(e) {
     e.preventDefault();

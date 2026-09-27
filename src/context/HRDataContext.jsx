@@ -168,6 +168,18 @@ export function HRDataProvider({ children }) {
     setState((s) => ({ ...s, settings, employees, leaveBalances: deriveLeaveBalances(employees) }));
   }
 
+  async function setWorkReporters(employeeId, workReporterIds) {
+    await api.setWorkReporters(employeeId, workReporterIds);
+    const employees = await api.getEmployees();
+    setState((s) => ({ ...s, employees, leaveBalances: deriveLeaveBalances(employees) }));
+  }
+
+  async function setProjectManager(employeeId, canManageProjects) {
+    await api.setProjectManager(employeeId, canManageProjects);
+    const employees = await api.getEmployees();
+    setState((s) => ({ ...s, employees, leaveBalances: deriveLeaveBalances(employees) }));
+  }
+
   async function setProbation(employeeId, employmentStatus, probationEndDate) {
     await api.setProbation(employeeId, employmentStatus, probationEndDate);
     const employees = await api.getEmployees();
@@ -255,6 +267,8 @@ export function HRDataProvider({ children }) {
         updateSettings,
         resetSettings,
         setProbation,
+        setWorkReporters,
+        setProjectManager,
         claimEmergency,
         addKudos,
         toggleLike,

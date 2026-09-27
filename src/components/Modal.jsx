@@ -1,11 +1,11 @@
 import { X } from "lucide-react";
 
-export function Modal({ open, onClose, title, children }) {
+export function Modal({ open, onClose, title, size = "default", children }) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-surface shadow-xl">
+      <div className={`relative max-h-[90vh] w-full ${size === "lg" ? "max-w-3xl" : "max-w-lg"} overflow-y-auto rounded-2xl border border-border bg-surface shadow-xl`}>
         <div className="sticky top-0 flex items-center justify-between border-b border-border bg-surface px-5 py-4">
           <h3 className="font-display text-lg font-semibold">{title}</h3>
           <button

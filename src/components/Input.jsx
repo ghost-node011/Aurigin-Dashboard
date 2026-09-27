@@ -1,19 +1,33 @@
 import { cn } from "../lib/cn";
 
 const baseClass =
-  "w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-foreground outline-none transition focus:border-primary";
+  "rounded-lg border border-border bg-surface px-3.5 text-sm text-foreground outline-none transition focus:border-primary";
+
+// `cn` only joins classes, so a caller's `w-40` or `py-1` would lose to the
+// defaults depending on stylesheet order. Apply a default only when the
+// caller didn't set that property; a fixed height (h-8, h-9) also implies
+// tighter vertical padding so the text isn't clipped.
+function withDefaults(className = "") {
+  const has = (re) => re.test(className);
+  return cn(
+    baseClass,
+    !has(/(^|\s)w-/) && "w-full",
+    !has(/(^|\s)py-/) && (has(/(^|\s)h-\d/) ? "py-1" : "py-2.5"),
+    className,
+  );
+}
 
 export function Input({ className, ...props }) {
-  return <input className={cn(baseClass, className)} {...props} />;
+  return <input className={withDefaults(className)} {...props} />;
 }
 
 export function Textarea({ className, ...props }) {
-  return <textarea className={cn(baseClass, "resize-none", className)} {...props} />;
+  return <textarea className={withDefaults(cn("resize-none", className))} {...props} />;
 }
 
 export function Select({ className, children, ...props }) {
   return (
-    <select className={cn(baseClass, className)} {...props}>
+    <select className={withDefaults(className)} {...props}>
       {children}
     </select>
   );
