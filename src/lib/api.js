@@ -113,6 +113,17 @@ export const api = {
 
   getUploadSignature: () => request("/uploads/signature"),
 
+  getBniStats: () => request("/bni/stats"),
+  getBniContacts: (query) => request(`/bni?${new URLSearchParams(clean(query))}`),
+  // A file download needs the auth header, so it's fetched as a blob.
+  downloadBniCsv: async (query) => {
+    const res = await fetch(`${API_URL}/bni/export?${new URLSearchParams(clean(query))}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem(TOKEN_KEY)}` },
+    });
+    if (!res.ok) throw new Error(`Export failed: ${res.status}`);
+    return res.blob();
+  },
+
   getNotifications: () => request("/notifications"),
   markNotificationsRead: (ids) => post("/notifications/read", ids ? { ids } : { all: true }),
 

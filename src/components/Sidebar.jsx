@@ -20,6 +20,7 @@ import {
   ListTodo,
   ListFilter,
   FolderKanban,
+  Contact,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { Avatar } from "./Avatar";
@@ -33,7 +34,8 @@ const NAV_ITEMS = [
   { to: "/board", label: "Board", icon: KanbanSquare, roles: ["admin", "hr", "manager", "employee"] },
   { to: "/backlog", label: "Backlog", icon: ListTodo, roles: ["admin", "hr", "manager", "employee"] },
   { to: "/issues", label: "Issues", icon: ListFilter, roles: ["admin", "hr", "manager", "employee"] },
-  { to: "/projects", label: "Projects", icon: FolderKanban, roles: ["admin", "hr", "manager", "employee"] },
+  // Project managers only: admins plus anyone granted it on their profile.
+  { to: "/projects", label: "Projects", icon: FolderKanban, visible: (user) => user.role === "admin" || Boolean(user.canManageProjects) },
   { to: "/performance", label: "Performance", icon: TrendingUp, roles: ["admin", "hr", "manager", "employee"] },
   { to: "/attendance", label: "Attendance", icon: CalendarClock, roles: ["admin", "hr", "manager", "employee"] },
   { to: "/leave", label: "Leave", icon: CalendarDays, roles: ["admin", "hr", "manager", "employee"] },
@@ -49,6 +51,7 @@ const NAV_ITEMS = [
   { to: "/announcements", label: "Announcements", icon: Megaphone, roles: ["admin", "hr", "manager", "employee"] },
   { to: "/org-chart", label: "Org Chart", icon: Network, roles: ["admin", "hr", "manager", "employee"] },
   { to: "/analytics", label: "Analytics", icon: BarChart3, roles: ["admin", "hr"] },
+  { to: "/bni", label: "BNI data", icon: Contact, roles: ["admin"] },
   { to: "/settings", label: "Settings", icon: SlidersHorizontal, roles: ["admin", "hr"] },
 ];
 

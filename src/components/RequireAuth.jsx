@@ -36,3 +36,12 @@ export function RequireRole({ roles }) {
   if (!roles.includes(currentUser.role)) return <Navigate to="/" replace />;
   return <Outlet />;
 }
+
+/** Project managers only — admins, plus anyone granted it on their profile. */
+export function RequireProjectManager() {
+  const { currentUser, authLoading } = useAuth();
+  if (authLoading) return <AuthLoadingScreen />;
+  if (!currentUser) return <Navigate to="/login" replace />;
+  if (currentUser.role !== "admin" && !currentUser.canManageProjects) return <Navigate to="/" replace />;
+  return <Outlet />;
+}

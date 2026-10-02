@@ -2,7 +2,7 @@ import { Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { HRDataProvider } from "./context/HRDataContext";
 import { AppLayout } from "./components/AppLayout";
-import { RequireAuth, RequireRole } from "./components/RequireAuth";
+import { RequireAuth, RequireRole, RequireProjectManager } from "./components/RequireAuth";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Directory from "./pages/Directory";
@@ -23,6 +23,7 @@ import Issues from "./pages/Issues";
 import IssuePage from "./pages/IssuePage";
 import Projects from "./pages/Projects";
 import SprintReport from "./pages/SprintReport";
+import BniData from "./pages/BniData";
 
 export default function App() {
   return (
@@ -40,7 +41,9 @@ export default function App() {
               <Route path="/backlog" element={<Backlog />} />
               <Route path="/issues" element={<Issues />} />
               <Route path="/browse/:issueKey" element={<IssuePage />} />
-              <Route path="/projects" element={<Projects />} />
+              <Route element={<RequireProjectManager />}>
+                <Route path="/projects" element={<Projects />} />
+              </Route>
               <Route path="/sprints/:sprintId/report" element={<SprintReport />} />
               <Route path="/performance" element={<Performance />} />
               <Route path="/attendance" element={<Attendance />} />
@@ -52,6 +55,9 @@ export default function App() {
               <Route element={<RequireRole roles={["admin", "hr"]} />}>
                 <Route path="/analytics" element={<Analytics />} />
                 <Route path="/settings" element={<Settings />} />
+              </Route>
+              <Route element={<RequireRole roles={["admin"]} />}>
+                <Route path="/bni" element={<BniData />} />
               </Route>
             </Route>
           </Route>

@@ -5,10 +5,17 @@ import { RATING_TONE, formatMinutes } from "../../data/work";
 /** The end-of-day assessment stored on a closed day plan. */
 export function ReviewCard({ plan, title = "Today's review", showSummary = false }) {
   const review = plan.review ?? {};
+  // A day nobody summarised, reviewed from what they did on their tickets.
+  const auto = plan.reviewSource === "auto";
   return (
     <Card
       title={title}
-      action={review.rating ? <Badge tone={RATING_TONE[review.rating]}>{review.rating}</Badge> : null}
+      action={
+        <span className="flex items-center gap-2">
+          {auto && <Badge tone="warning">No summary — reviewed from tickets</Badge>}
+          {review.rating && <Badge tone={RATING_TONE[review.rating]}>{review.rating}</Badge>}
+        </span>
+      }
     >
       <div className="grid gap-4 sm:grid-cols-3">
         <Stat label="Score" value={review.score != null ? `${review.score} / 100` : "—"} />
@@ -28,7 +35,8 @@ export function ReviewCard({ plan, title = "Today's review", showSummary = false
       {showSummary && (
         <div className="mt-5 space-y-3 border-t border-border pt-4 text-sm">
           <Quote label="Morning overview" text={plan.overview} />
-          <Quote label="End-of-day summary" text={plan.summary} />
+          {auto && <Quote label="Ticket activity that day" text={plan.summary} />}
+          {!auto && <Quote label="End-of-day summary" text={plan.summary} />}
         </div>
       )}
     </Card>
