@@ -124,6 +124,15 @@ export const api = {
     return res.blob();
   },
 
+  getBeebarkWaitlist: (query) => request(`/beebark/waitlist?${new URLSearchParams(clean(query))}`),
+  downloadBeebarkCsv: async (query) => {
+    const res = await fetch(`${API_URL}/beebark/waitlist/export?${new URLSearchParams(clean(query))}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem(TOKEN_KEY)}` },
+    });
+    if (!res.ok) throw new Error(`Export failed: ${res.status}`);
+    return res.blob();
+  },
+
   getNotifications: () => request("/notifications"),
   markNotificationsRead: (ids) => post("/notifications/read", ids ? { ids } : { all: true }),
 

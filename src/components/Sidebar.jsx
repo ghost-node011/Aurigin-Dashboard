@@ -21,6 +21,7 @@ import {
   ListFilter,
   FolderKanban,
   Contact,
+  ClipboardCheck,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { Avatar } from "./Avatar";
@@ -52,6 +53,7 @@ const NAV_ITEMS = [
   { to: "/org-chart", label: "Org Chart", icon: Network, roles: ["admin", "hr", "manager", "employee"] },
   { to: "/analytics", label: "Analytics", icon: BarChart3, roles: ["admin", "hr"] },
   { to: "/bni", label: "BNI data", icon: Contact, roles: ["admin"] },
+  { to: "/beebark-waitlist", label: "BeeBark waitlist", icon: ClipboardCheck, roles: ["admin"] },
   { to: "/settings", label: "Settings", icon: SlidersHorizontal, roles: ["admin", "hr"] },
 ];
 

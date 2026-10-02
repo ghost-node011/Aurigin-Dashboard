@@ -24,6 +24,7 @@ import IssuePage from "./pages/IssuePage";
 import Projects from "./pages/Projects";
 import SprintReport from "./pages/SprintReport";
 import BniData from "./pages/BniData";
+import BeebarkWaitlist from "./pages/BeebarkWaitlist";
 
 export default function App() {
   return (
@@ -58,6 +59,7 @@ export default function App() {
               </Route>
               <Route element={<RequireRole roles={["admin"]} />}>
                 <Route path="/bni" element={<BniData />} />
+                <Route path="/beebark-waitlist" element={<BeebarkWaitlist />} />
               </Route>
             </Route>
           </Route>
