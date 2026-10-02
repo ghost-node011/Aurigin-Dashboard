@@ -132,6 +132,7 @@ export const api = {
   planDay: (overview, projectKey) => post("/work/day/plan", { overview, ...(projectKey && { projectKey }) }),
   closeDay: (summary) => post("/work/day/close", { summary }),
   reopenDay: () => post("/work/day/reopen", {}),
+  getPerformanceSummary: (days = 30) => request(`/work/performance/summary?days=${days}`),
   getPerformance: (employeeId, days = 30) =>
     request(`/work/performance?${new URLSearchParams({ ...(employeeId && { employeeId }), days })}`),
 };

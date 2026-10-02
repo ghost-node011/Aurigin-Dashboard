@@ -59,6 +59,19 @@ export default function EmployeeProfile() {
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="font-display text-2xl font-semibold">{employee.name}</h1>
             <Badge>{employee.status}</Badge>
+            {employee.status === "Onboarding" && ["admin", "hr"].includes(currentUser.role) && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm(`Mark ${employee.name} fully onboarded? Any open checklist tasks will be ticked off with a note.`)) {
+                    data.completeOnboarding(employee.id);
+                  }
+                }}
+                className="rounded-full border border-primary/40 px-2.5 py-0.5 text-xs font-medium text-primary hover:bg-primary-soft"
+              >
+                Mark fully onboarded
+              </button>
+            )}
             {employee.employmentStatus === "Probation" && <Badge>On probation</Badge>}
           </div>
           <p className="mt-1 text-muted-foreground">{employee.title}</p>

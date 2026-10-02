@@ -34,7 +34,7 @@ const EMPTY_STATE = {
 };
 
 export function HRDataProvider({ children }) {
-  const { currentUser } = useAuth();
+  const { currentUser, refreshCurrentUser } = useAuth();
   const [state, setState] = useState(EMPTY_STATE);
   const [status, setStatus] = useState("idle");
   const [error, setError] = useState(null);
@@ -206,8 +206,15 @@ export function HRDataProvider({ children }) {
 
   async function completeOnboarding(employeeId) {
     await api.completeOnboarding(employeeId);
-    const employees = await api.getEmployees();
-    setState((s) => ({ ...s, employees, leaveBalances: deriveLeaveBalances(employees) }));
+    const [employees, onboardingTasks] = await Promise.all([api.getEmployees(), api.getOnboardingTasks()]);
+    setState((s) => ({
+      ...s,
+      employees,
+      leaveBalances: deriveLeaveBalances(employees),
+      onboardingPlans: groupOnboardingTasks(onboardingTasks),
+    }));
+    // Finishing your own onboarding changes what the app shows you.
+    if (employeeId === currentUser?.id) await refreshCurrentUser();
   }
 
   async function addKudos(input) {

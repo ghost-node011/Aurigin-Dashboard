@@ -33,8 +33,11 @@ export default function Attendance() {
   }, [myRecords, monthPrefix]);
 
   const reports = data.getAllReports(currentUser.id);
-  const isPeopleManager = ["manager", "hr", "admin"].includes(currentUser.role) && reports.length > 0;
   const isOrgWideApprover = ["hr", "admin"].includes(currentUser.role);
+  // HR and admins see the whole company; managers see their reporting line.
+  const teamPeople = isOrgWideApprover ? data.employees.filter((e) => e.id !== currentUser.id) : reports;
+  const isPeopleManager = ["manager", "hr", "admin"].includes(currentUser.role) && teamPeople.length > 0;
+  const [teamView, setTeamView] = useState("day");
   const canApproveWfh = ["manager", "hr", "admin"].includes(currentUser.role) && (reports.length > 0 || isOrgWideApprover);
   const [teamDate, setTeamDate] = useState(today);
 
@@ -168,19 +171,36 @@ export default function Attendance() {
 
       {isPeopleManager && (
         <Card
-          title="Team attendance"
+          title={isOrgWideApprover ? "Everyone's attendance" : "Team attendance"}
           action={
-            <input
-              type="date"
-              value={teamDate}
-              max={today}
-              onChange={(e) => setTeamDate(e.target.value)}
-              className="rounded-lg border border-border bg-surface px-2.5 py-1.5 text-sm"
-            />
+            <div className="flex items-center gap-2">
+              <div className="flex rounded-lg border border-border p-0.5 text-xs">
+                {["day", "month"].map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setTeamView(v)}
+                    className={cn("rounded-md px-2.5 py-1 capitalize", teamView === v ? "bg-primary-soft text-primary" : "text-muted-foreground")}
+                  >
+                    {v}
+                  </button>
+                ))}
+              </div>
+              <input
+                type={teamView === "day" ? "date" : "month"}
+                value={teamView === "day" ? teamDate : teamDate.slice(0, 7)}
+                max={teamView === "day" ? today : today.slice(0, 7)}
+                onChange={(e) => e.target.value && setTeamDate(teamView === "day" ? e.target.value : `${e.target.value}-01`)}
+                className="rounded-lg border border-border bg-surface px-2.5 py-1.5 text-sm"
+              />
+            </div>
           }
         >
+          {teamView === "month" ? (
+            <MonthSummary people={teamPeople} records={data.attendanceRecords} month={teamDate.slice(0, 7)} />
+          ) : (
           <div className="space-y-2">
-            {reports.map((employee) => {
+            {teamPeople.map((employee) => {
               const record = data.attendanceRecords.find((r) => r.employeeId === employee.id && r.date === teamDate);
               return (
                 <div key={employee.id} className="flex items-center gap-3 border-b border-border py-2.5 last:border-b-0">
@@ -192,11 +212,15 @@ export default function Attendance() {
                   <span className="text-xs text-muted-foreground">
                     {record?.checkIn ? `${record.checkIn} – ${record.checkOut ?? "…"}` : "—"}
                   </span>
+                  {record && punctualityLabel(record) && (
+                    <span className={cn("text-xs", record.emergency ? "text-muted-foreground" : "text-danger")}>{punctualityLabel(record)}</span>
+                  )}
                   <Badge>{record?.status ?? "No record"}</Badge>
                 </div>
               );
             })}
           </div>
+          )}
         </Card>
       )}
 
@@ -326,5 +350,47 @@ function EmergencyModal({ open, onClose, left, allowance, onSubmit }) {
         <Button onClick={submit} disabled={busy}>Mark as emergency</Button>
       </div>
     </Modal>
+  );
+}
+
+/** Per-person counts for one month: days present, WFH, on leave, half days and early leaves. */
+function MonthSummary({ people, records, month }) {
+  const cols = ["Present", "WFH", "Leave", "Half Day"];
+  return (
+    <div className="-m-5 overflow-x-auto">
+      <table className="w-full min-w-[36rem] text-sm">
+        <thead className="border-b border-border text-left text-xs text-muted-foreground">
+          <tr>
+            <th className="px-5 py-2 font-medium">Person</th>
+            {cols.map((c) => (
+              <th key={c} className="px-2 py-2 text-right font-medium">
+                {c}
+              </th>
+            ))}
+            <th className="px-5 py-2 text-right font-medium">Left early</th>
+          </tr>
+        </thead>
+        <tbody>
+          {people.map((p) => {
+            const mine = records.filter((r) => r.employeeId === p.id && r.date.startsWith(month));
+            return (
+              <tr key={p.id} className="border-b border-border last:border-b-0">
+                <td className="px-5 py-2">
+                  <span className="flex items-center gap-2">
+                    <Avatar employee={p} size="sm" /> {p.name}
+                  </span>
+                </td>
+                {cols.map((c) => (
+                  <td key={c} className="px-2 py-2 text-right tabular-nums">
+                    {mine.filter((r) => r.status === c).length}
+                  </td>
+                ))}
+                <td className="px-5 py-2 text-right tabular-nums">{mine.filter((r) => r.earlyCheckOut && !r.emergency).length}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }

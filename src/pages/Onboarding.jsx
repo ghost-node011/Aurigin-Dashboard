@@ -113,8 +113,16 @@ export default function Onboarding() {
                   <div className="flex items-center gap-3">
                     <span className="text-xs text-muted-foreground">{done} / {plan.length} done</span>
                     {canAddHire && (
-                      <Button size="sm" variant="outline" disabled={!complete} onClick={() => data.completeOnboarding(id)}>
-                        <CheckCheck className="h-3.5 w-3.5" /> Mark active
+                      <Button
+                        size="sm"
+                        variant={complete ? "default" : "outline"}
+                        onClick={() => {
+                          const open = plan.length - done;
+                          if (open > 0 && !confirm(`${open} task${open === 1 ? " is" : "s are"} still open. Mark ${employee.name} fully onboarded anyway? Open tasks will be ticked off with a note.`)) return;
+                          data.completeOnboarding(id);
+                        }}
+                      >
+                        <CheckCheck className="h-3.5 w-3.5" /> Mark fully onboarded
                       </Button>
                     )}
                   </div>
