@@ -124,6 +124,18 @@ export const api = {
     return res.blob();
   },
 
+  // Email BNI members through BeeBark (sent from no-reply@thebeebark.com, tracked)
+  getBniEmailTemplates: () => request("/bni/comms/templates"),
+  previewBniEmail: (templateId, name) => post("/bni/comms/preview", { templateId, name }),
+  getBniEmailAudience: (filters) => request(`/bni/comms/audience?${new URLSearchParams(clean(filters))}`),
+  sendBniEmail: (body) => post("/bni/comms/send", body),
+  getBniEmailRequests: (query) => request(`/bni/comms/requests?${new URLSearchParams(clean(query))}`),
+  getBniEmailRequest: (requestId) => request(`/bni/comms/requests/${encodeURIComponent(requestId)}`),
+  cancelBniEmailRequest: (requestId) => post(`/bni/comms/requests/${encodeURIComponent(requestId)}/cancel`, {}),
+  getBniEmailLogs: (query) => request(`/bni/comms/logs?${new URLSearchParams(clean(query))}`),
+  getBniEmailLog: (id) => request(`/bni/comms/logs/${encodeURIComponent(id)}`),
+  getBniEmailStatus: (ids) => post("/bni/comms/status", { ids }),
+
   getBeebarkWaitlist: (query) => request(`/beebark/waitlist?${new URLSearchParams(clean(query))}`),
   downloadBeebarkCsv: async (query) => {
     const res = await fetch(`${API_URL}/beebark/waitlist/export?${new URLSearchParams(clean(query))}`, {

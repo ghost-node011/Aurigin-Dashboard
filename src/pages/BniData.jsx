@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
-import { Download, Mail, Phone, Search, ShieldCheck } from "lucide-react";
+import { Link } from "react-router-dom";
+import { BarChart3, Download, Mail, Phone, Search, Send, ShieldCheck } from "lucide-react";
 import { api } from "../lib/api";
 import { Card } from "../components/Card";
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
 import { Input, Select } from "../components/Input";
 import { cn } from "../lib/cn";
+import { SendEmailModal } from "../components/bni/SendEmailModal";
+import { EMAIL_STATUS } from "../components/bni/emailStatus";
 
 const CATEGORY_LABEL = {
   "interior designer": "Interior designers",
@@ -27,6 +30,8 @@ export default function BniData() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [exporting, setExporting] = useState(false);
+  const [emailing, setEmailing] = useState(false);
+  const [emailStatus, setEmailStatus] = useState({});
 
   useEffect(() => {
     api.getBniStats().then(setStats, (err) => setError(err.message));
@@ -52,6 +57,20 @@ export default function BniData() {
       cancelled = true;
     };
   }, [filters, page]);
+
+  // Latest BeeBark email status for the members on this page
+  useEffect(() => {
+    const ids = data?.items.map((c) => c.id) ?? [];
+    if (ids.length === 0) return;
+    let cancelled = false;
+    api.getBniEmailStatus(ids).then(
+      (d) => !cancelled && setEmailStatus((prev) => ({ ...prev, ...d.statuses })),
+      () => {},
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [data]);
 
   const set = (key) => (e) => {
     setFilters((f) => ({ ...f, [key]: e.target.value }));
@@ -86,10 +105,22 @@ export default function BniData() {
             {total.toLocaleString("en-IN")} BNI members across four categories. Visible to admins only.
           </p>
         </div>
-        <Button variant="outline" onClick={exportCsv} disabled={exporting}>
-          <Download className="h-4 w-4" /> {exporting ? "Exporting…" : "Export CSV"}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Link to="/bni/emails">
+            <Button variant="outline">
+              <BarChart3 className="h-4 w-4" /> Email reports
+            </Button>
+          </Link>
+          <Button variant="outline" onClick={exportCsv} disabled={exporting}>
+            <Download className="h-4 w-4" /> {exporting ? "Exporting…" : "Export CSV"}
+          </Button>
+          <Button onClick={() => setEmailing(true)}>
+            <Send className="h-4 w-4" /> Email members
+          </Button>
+        </div>
       </div>
+
+      <SendEmailModal open={emailing} onClose={() => setEmailing(false)} filters={filters} />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {(stats ?? []).map((c) => (
@@ -150,7 +181,7 @@ export default function BniData() {
         {data && data.items.length === 0 && <p className="text-sm text-muted-foreground">No members match these filters.</p>}
         {data && data.items.length > 0 && (
           <div className="-m-5 overflow-x-auto">
-            <table className="w-full min-w-[56rem] text-sm">
+            <table className="w-full min-w-[64rem] text-sm">
               <thead className="border-b border-border text-left text-xs text-muted-foreground">
                 <tr>
                   <th className="px-4 py-2 font-medium">Name</th>
@@ -158,6 +189,7 @@ export default function BniData() {
                   <th className="px-2 py-2 font-medium">Category</th>
                   <th className="px-2 py-2 font-medium">Phone</th>
                   <th className="px-2 py-2 font-medium">Email</th>
+                  <th className="px-2 py-2 font-medium">BeeBark email</th>
                   <th className="px-4 py-2 font-medium">Chapter</th>
                 </tr>
               </thead>
@@ -195,6 +227,18 @@ export default function BniData() {
                         <a href={`mailto:${c.email}`} className="inline-flex max-w-full items-center gap-1 truncate hover:text-primary">
                           <Mail className="h-3 w-3 shrink-0" /> <span className="truncate">{c.email}</span>
                         </a>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td className="whitespace-nowrap px-2 py-2">
+                      {emailStatus[c.id] ? (
+                        <Link to={`/bni/emails?request=${encodeURIComponent(emailStatus[c.id].requestId)}`} className="inline-flex flex-col">
+                          <Badge tone={emailStatus[c.id].openCount > 0 ? "info" : EMAIL_STATUS[emailStatus[c.id].status]?.tone}>
+                            {emailStatus[c.id].openCount > 0 ? "Opened" : EMAIL_STATUS[emailStatus[c.id].status]?.label ?? emailStatus[c.id].status}
+                          </Badge>
+                          {emailStatus[c.id].clickCount > 0 && <span className="mt-0.5 text-[11px] text-info">Clicked</span>}
+                        </Link>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
