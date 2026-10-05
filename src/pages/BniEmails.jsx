@@ -345,10 +345,22 @@ function RequestDetail({ requestId, onBack }) {
 
 function LogTimeline({ id, onClose }) {
   const [log, setLog] = useState(null);
+  const [stopping, setStopping] = useState(false);
   useEffect(() => {
     setLog(null);
     if (id) api.getBniEmailLog(id).then(setLog, () => {});
   }, [id]);
+
+  // For someone who replied "no": never email this address again
+  async function stopEmailing() {
+    setStopping(true);
+    try {
+      await api.stopEmailing(log.to);
+      setLog((l) => ({ ...l, unsubscribedAt: new Date().toISOString() }));
+    } finally {
+      setStopping(false);
+    }
+  }
 
   return (
     <Modal open={!!id} onClose={onClose} title={log ? log.name || log.to : "Loading…"}>
@@ -361,6 +373,11 @@ function LogTimeline({ id, onClose }) {
               {log.unsubscribedAt && <Badge tone="warning">Unsubscribed {formatDateTime(log.unsubscribedAt)}</Badge>}
             </div>
             {(log.bounceReason || log.error) && <p className="mt-2 text-danger">{log.bounceReason || log.error}</p>}
+            {!log.unsubscribedAt && (
+              <Button size="sm" variant="outline" className="mt-3" onClick={stopEmailing} disabled={stopping}>
+                {stopping ? "Saving…" : "Stop emailing (replied “no”)"}
+              </Button>
+            )}
           </div>
           <ol className="space-y-2 border-l border-border pl-4">
             {log.events.length === 0 && <li className="text-muted-foreground">No events yet.</li>}

@@ -135,6 +135,7 @@ export const api = {
   getBniEmailLogs: (query) => request(`/bni/comms/logs?${new URLSearchParams(clean(query))}`),
   getBniEmailLog: (id) => request(`/bni/comms/logs/${encodeURIComponent(id)}`),
   getBniEmailStatus: (ids) => post("/bni/comms/status", { ids }),
+  stopEmailing: (email) => post("/bni/comms/suppressions", { email }),
 
   getBeebarkWaitlist: (query) => request(`/beebark/waitlist?${new URLSearchParams(clean(query))}`),
   downloadBeebarkCsv: async (query) => {
