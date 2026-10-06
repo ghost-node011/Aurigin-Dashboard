@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowLeft, MessageCircle, Phone, Search } from "lucide-react";
 import { api } from "../lib/api";
 import { Card } from "../components/Card";
 import { Badge } from "../components/Badge";
@@ -291,9 +291,10 @@ function RequestDetail({ requestId, onBack }) {
               <tbody>
                 {logs.items.map((l) => (
                   <tr key={l._id} onClick={() => setOpenLog(l._id)} className="cursor-pointer border-b border-border align-top last:border-b-0 hover:bg-surface-muted/60">
-                    <td className="max-w-[18rem] px-4 py-2">
+                    <td className="max-w-[22rem] px-4 py-2">
                       <p className="truncate font-medium">{l.name || "—"}</p>
                       <p className="truncate text-xs text-muted-foreground">{l.to}</p>
+                      <MemberLine member={l.member} />
                     </td>
                     <td className="px-2 py-2">
                       <Badge tone={EMAIL_STATUS[l.status]?.tone}>{EMAIL_STATUS[l.status]?.label ?? l.status}</Badge>
@@ -351,6 +352,40 @@ function RequestDetail({ requestId, onBack }) {
 
       <LogTimeline id={openLog} onClose={() => setOpenLog(null)} />
       <FollowUpModal open={followingUp} onClose={() => setFollowingUp(false)} request={request} />
+    </div>
+  );
+}
+
+// Indian numbers without a country code get +91 for WhatsApp links
+const waNumber = (phone) => {
+  const digits = phone.replace(/\D/g, "");
+  return digits.length === 10 ? `91${digits}` : digits;
+};
+
+/** The recipient's BNI details: phone (call or WhatsApp), company, city. */
+function MemberLine({ member }) {
+  if (!member) return null;
+  const details = [member.company, member.city].filter(Boolean).join(" · ");
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs" onClick={(e) => e.stopPropagation()}>
+      {member.phone ? (
+        <>
+          <a href={`tel:${member.phone.replace(/\s/g, "")}`} className="inline-flex items-center gap-1 font-medium text-foreground hover:text-primary">
+            <Phone className="h-3 w-3" /> {member.phone}
+          </a>
+          <a
+            href={`https://wa.me/${waNumber(member.phone)}`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 text-success hover:underline"
+          >
+            <MessageCircle className="h-3 w-3" /> WhatsApp
+          </a>
+        </>
+      ) : (
+        <span className="text-muted-foreground">No phone</span>
+      )}
+      {details && <span className="truncate text-muted-foreground">{details}</span>}
     </div>
   );
 }
@@ -419,6 +454,7 @@ function LogTimeline({ id, onClose }) {
         <div className="space-y-4 text-sm">
           <div>
             <p className="text-muted-foreground">{log.to}</p>
+            <MemberLine member={log.member} />
             <div className="mt-2 flex flex-wrap gap-2">
               <Badge tone={EMAIL_STATUS[log.status]?.tone}>{EMAIL_STATUS[log.status]?.label ?? log.status}</Badge>
               {log.unsubscribedAt && <Badge tone="warning">Unsubscribed {formatDateTime(log.unsubscribedAt)}</Badge>}
