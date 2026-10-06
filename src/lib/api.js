@@ -40,6 +40,7 @@ export const api = {
   setWorkReporters: (employeeId, workReporterIds) =>
     patch(`/employees/${employeeId}/work-reporters`, { workReporterIds }),
   setPolicyExempt: (employeeId, policyExempt) => patch(`/employees/${employeeId}/policy-exempt`, { policyExempt }),
+  setBniAccess: (employeeId, canManageBni) => patch(`/employees/${employeeId}/bni-access`, { canManageBni }),
   setProjectManager: (employeeId, canManageProjects) =>
     patch(`/employees/${employeeId}/project-manager`, { canManageProjects }),
   completeOnboarding: (employeeId) => patch(`/employees/${employeeId}/complete-onboarding`, {}),
@@ -115,6 +116,8 @@ export const api = {
 
   getBniStats: () => request("/bni/stats"),
   getBniContacts: (query) => request(`/bni?${new URLSearchParams(clean(query))}`),
+  removeBniMembers: (ids) => post("/bni/remove", { ids }),
+  restoreBniMembers: (ids) => post("/bni/restore", { ids }),
   // A file download needs the auth header, so it's fetched as a blob.
   downloadBniCsv: async (query) => {
     const res = await fetch(`${API_URL}/bni/export?${new URLSearchParams(clean(query))}`, {

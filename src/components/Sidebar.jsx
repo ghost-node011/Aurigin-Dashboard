@@ -52,7 +52,8 @@ const NAV_ITEMS = [
   { to: "/announcements", label: "Announcements", icon: Megaphone, roles: ["admin", "hr", "manager", "employee"] },
   { to: "/org-chart", label: "Org Chart", icon: Network, roles: ["admin", "hr", "manager", "employee"] },
   { to: "/analytics", label: "Analytics", icon: BarChart3, roles: ["admin", "hr"] },
-  { to: "/bni", label: "BNI data", icon: Contact, roles: ["admin"] },
+  // Admins, plus anyone granted the BNI directory on their profile
+  { to: "/bni", label: "BNI data", icon: Contact, visible: (user) => user.role === "admin" || Boolean(user.canManageBni) },
   { to: "/beebark-waitlist", label: "BeeBark waitlist", icon: ClipboardCheck, roles: ["admin"] },
   { to: "/settings", label: "Settings", icon: SlidersHorizontal, roles: ["admin", "hr"] },
 ];

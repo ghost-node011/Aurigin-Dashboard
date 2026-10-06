@@ -2,7 +2,7 @@ import { Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { HRDataProvider } from "./context/HRDataContext";
 import { AppLayout } from "./components/AppLayout";
-import { RequireAuth, RequireRole, RequireProjectManager } from "./components/RequireAuth";
+import { RequireAuth, RequireRole, RequireProjectManager, RequireBniAccess } from "./components/RequireAuth";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Directory from "./pages/Directory";
@@ -58,8 +58,10 @@ export default function App() {
                 <Route path="/analytics" element={<Analytics />} />
                 <Route path="/settings" element={<Settings />} />
               </Route>
-              <Route element={<RequireRole roles={["admin"]} />}>
+              <Route element={<RequireBniAccess />}>
                 <Route path="/bni" element={<BniData />} />
+              </Route>
+              <Route element={<RequireRole roles={["admin"]} />}>
                 <Route path="/bni/emails" element={<BniEmails />} />
                 <Route path="/beebark-waitlist" element={<BeebarkWaitlist />} />
               </Route>

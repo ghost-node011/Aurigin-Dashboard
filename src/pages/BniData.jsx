@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { BarChart3, Download, Mail, Phone, Search, Send, ShieldCheck } from "lucide-react";
+import { BarChart3, Download, Mail, Phone, RotateCcw, Search, Send, ShieldCheck, Trash2 } from "lucide-react";
 import { api } from "../lib/api";
 import { Card } from "../components/Card";
 import { Badge } from "../components/Badge";
@@ -9,6 +9,8 @@ import { Input, Select } from "../components/Input";
 import { cn } from "../lib/cn";
 import { SendEmailModal } from "../components/bni/SendEmailModal";
 import { EMAIL_STATUS } from "../components/bni/emailStatus";
+import { Modal } from "../components/Modal";
+import { useAuth } from "../context/AuthContext";
 
 const CATEGORY_LABEL = {
   "interior designer": "Interior designers",
@@ -18,11 +20,23 @@ const CATEGORY_LABEL = {
 };
 
 /**
- * BNI member leads (admins only): interior designers, architects,
- * construction and real estate. Verified-Indian members come first; the
- * rest are email contacts whose country isn't recorded.
+ * BNI member leads: interior designers, architects, construction and real
+ * estate. Verified-Indian members come first; the rest are email contacts
+ * whose country isn't recorded.
+ *
+ * Admins see everything. People granted the BNI directory can view and
+ * remove members, but can't export, email or see email reports.
  */
 export default function BniData() {
+  const { currentUser } = useAuth();
+  const isAdmin = currentUser?.role === "admin";
+  const [view, setView] = useState("directory"); // "directory" | "removed" (admins)
+  const [selected, setSelected] = useState(() => new Set());
+  const [confirming, setConfirming] = useState(null); // members about to be removed
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState(null);
+  const [removedTotal, setRemovedTotal] = useState(0);
+  const [reload, setReload] = useState(0);
   const [stats, setStats] = useState(null);
   const [filters, setFilters] = useState({ category: "", phone: "", email: "", verified: "", q: "" });
   const [text, setText] = useState("");
@@ -35,7 +49,8 @@ export default function BniData() {
 
   useEffect(() => {
     api.getBniStats().then(setStats, (err) => setError(err.message));
-  }, []);
+    if (isAdmin) api.getBniContacts({ removed: "yes", limit: 1 }).then((d) => setRemovedTotal(d.total), () => {});
+  }, [isAdmin, reload]);
 
   // Debounce the search box.
   useEffect(() => {
@@ -49,19 +64,23 @@ export default function BniData() {
   useEffect(() => {
     let cancelled = false;
     setError(null);
-    api.getBniContacts({ ...filters, page, limit: 50 }).then(
-      (d) => !cancelled && setData(d),
+    api.getBniContacts({ ...filters, ...(view === "removed" ? { removed: "yes" } : {}), page, limit: 50 }).then(
+      (d) => {
+        if (cancelled) return;
+        setData(d);
+        setSelected(new Set());
+      },
       (err) => !cancelled && setError(err.message),
     );
     return () => {
       cancelled = true;
     };
-  }, [filters, page]);
+  }, [filters, page, view, reload]);
 
-  // Latest BeeBark email status for the members on this page
+  // Latest BeeBark email status for the members on this page (admins only)
   useEffect(() => {
     const ids = data?.items.map((c) => c.id) ?? [];
-    if (ids.length === 0) return;
+    if (!isAdmin || ids.length === 0) return;
     let cancelled = false;
     api.getBniEmailStatus(ids).then(
       (d) => !cancelled && setEmailStatus((prev) => ({ ...prev, ...d.statuses })),
@@ -70,7 +89,7 @@ export default function BniData() {
     return () => {
       cancelled = true;
     };
-  }, [data]);
+  }, [data, isAdmin]);
 
   const set = (key) => (e) => {
     setFilters((f) => ({ ...f, [key]: e.target.value }));
@@ -95,6 +114,48 @@ export default function BniData() {
   }
 
   const total = stats?.reduce((s, c) => s + c.total, 0) ?? 0;
+  const items = data?.items ?? [];
+  const removedView = view === "removed";
+  const allOnPage = items.length > 0 && items.every((c) => selected.has(c.id));
+  const toggle = (id) => setSelected((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    return next;
+  });
+  const toggleAll = () => setSelected(allOnPage ? new Set() : new Set(items.map((c) => c.id)));
+
+  async function removeMembers() {
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await api.removeBniMembers(confirming.map((c) => c.id));
+      setNotice(
+        `Removed ${r.removed} member${r.removed === 1 ? "" : "s"}. They won't be emailed again` +
+          (r.emailBlockFailed ? ` (${r.emailBlockFailed} email address${r.emailBlockFailed === 1 ? "" : "es"} couldn't be added to BeeBark's do-not-email list, but they're already out of every send from here).` : "."),
+      );
+      setConfirming(null);
+      setReload((n) => n + 1);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function restoreMembers(list) {
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await api.restoreBniMembers(list.map((c) => c.id));
+      setNotice(`Restored ${r.restored} member${r.restored === 1 ? "" : "s"} to the directory. Their email addresses stay on the do-not-email list.`);
+      setReload((n) => n + 1);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -102,25 +163,53 @@ export default function BniData() {
         <div>
           <h1 className="font-display text-3xl font-semibold">BNI data</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {total.toLocaleString("en-IN")} BNI members across four categories. Visible to admins only.
+            {total.toLocaleString("en-IN")} BNI members across four categories.{" "}
+            {isAdmin ? "Visible to admins and people given BNI access." : "You can view and remove members."}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Link to="/bni/emails">
-            <Button variant="outline">
-              <BarChart3 className="h-4 w-4" /> Email reports
+        {isAdmin && (
+          <div className="flex flex-wrap gap-2">
+            <Link to="/bni/emails">
+              <Button variant="outline">
+                <BarChart3 className="h-4 w-4" /> Email reports
+              </Button>
+            </Link>
+            <Button variant="outline" onClick={exportCsv} disabled={exporting}>
+              <Download className="h-4 w-4" /> {exporting ? "Exporting…" : "Export CSV"}
             </Button>
-          </Link>
-          <Button variant="outline" onClick={exportCsv} disabled={exporting}>
-            <Download className="h-4 w-4" /> {exporting ? "Exporting…" : "Export CSV"}
-          </Button>
-          <Button onClick={() => setEmailing(true)}>
-            <Send className="h-4 w-4" /> Email members
-          </Button>
-        </div>
+            <Button onClick={() => setEmailing(true)}>
+              <Send className="h-4 w-4" /> Email members
+            </Button>
+          </div>
+        )}
       </div>
 
-      <SendEmailModal open={emailing} onClose={() => setEmailing(false)} filters={filters} />
+      {isAdmin && <SendEmailModal open={emailing} onClose={() => setEmailing(false)} filters={filters} />}
+
+      {isAdmin && (
+        <div className="inline-flex rounded-xl border border-border bg-surface p-1 text-sm" role="tablist">
+          {[
+            { id: "directory", label: "Directory" },
+            { id: "removed", label: `Removed${removedTotal ? ` (${removedTotal.toLocaleString("en-IN")})` : ""}` },
+          ].map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={view === t.id}
+              onClick={() => {
+                setView(t.id);
+                setPage(1);
+                setNotice(null);
+              }}
+              className={cn("rounded-lg px-3 py-1.5 font-medium", view === t.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}
+              data-testid={`bni-view-${t.id}`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {(stats ?? []).map((c) => (
@@ -176,27 +265,53 @@ export default function BniData() {
       </div>
 
       {error && <p className="text-sm text-danger">{error}</p>}
+      {notice && <p className="rounded-xl bg-success-soft px-4 py-2.5 text-sm text-success" data-testid="bni-notice">{notice}</p>}
 
-      <Card title={data ? `${data.total.toLocaleString("en-IN")} member${data.total === 1 ? "" : "s"}` : "Loading…"}>
-        {data && data.items.length === 0 && <p className="text-sm text-muted-foreground">No members match these filters.</p>}
+      {selected.size > 0 && (
+        <div className="sticky top-2 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-2.5 shadow-sm">
+          <span className="text-sm font-medium">{selected.size} selected</span>
+          <div className="flex gap-2">
+            <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Clear</Button>
+            {removedView ? (
+              <Button size="sm" variant="outline" disabled={busy} onClick={() => restoreMembers(items.filter((c) => selected.has(c.id)))} data-testid="bni-restore-selected">
+                <RotateCcw className="h-4 w-4" /> Restore {selected.size}
+              </Button>
+            ) : (
+              <Button size="sm" variant="danger" onClick={() => setConfirming(items.filter((c) => selected.has(c.id)))} data-testid="bni-remove-selected">
+                <Trash2 className="h-4 w-4" /> Remove {selected.size}
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
+      <Card title={data ? `${data.total.toLocaleString("en-IN")} ${removedView ? "removed " : ""}member${data.total === 1 ? "" : "s"}` : "Loading…"}>
+        {data && data.items.length === 0 && <p className="text-sm text-muted-foreground">{removedView ? "No one has been removed." : "No members match these filters."}</p>}
         {data && data.items.length > 0 && (
           <div className="-m-5 overflow-x-auto">
             <table className="w-full min-w-[64rem] text-sm">
               <thead className="border-b border-border text-left text-xs text-muted-foreground">
                 <tr>
-                  <th className="px-4 py-2 font-medium">Name</th>
+                  <th className="w-10 py-2 pl-4">
+                    <input type="checkbox" checked={allOnPage} onChange={toggleAll} className="h-4 w-4 accent-primary" aria-label="Select all on this page" />
+                  </th>
+                  <th className="px-2 py-2 font-medium">Name</th>
                   <th className="px-2 py-2 font-medium">Company</th>
                   <th className="px-2 py-2 font-medium">Category</th>
                   <th className="px-2 py-2 font-medium">Phone</th>
                   <th className="px-2 py-2 font-medium">Email</th>
-                  <th className="px-2 py-2 font-medium">BeeBark email</th>
-                  <th className="px-4 py-2 font-medium">Chapter</th>
+                  {isAdmin && !removedView && <th className="px-2 py-2 font-medium">BeeBark email</th>}
+                  <th className="px-2 py-2 font-medium">{removedView ? "Removed" : "Chapter"}</th>
+                  <th className="w-12 px-4 py-2" aria-label="Actions" />
                 </tr>
               </thead>
               <tbody>
                 {data.items.map((c) => (
-                  <tr key={c.id} className="border-b border-border align-top last:border-b-0 hover:bg-surface-muted/60">
-                    <td className="px-4 py-2">
+                  <tr key={c.id} className={cn("border-b border-border align-top last:border-b-0 hover:bg-surface-muted/60", selected.has(c.id) && "bg-primary/5")} data-testid={`bni-row-${c.id}`}>
+                    <td className="py-2 pl-4">
+                      <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggle(c.id)} className="mt-1 h-4 w-4 accent-primary" aria-label={`Select ${c.name || "member"}`} />
+                    </td>
+                    <td className="px-2 py-2">
                       <p className="font-medium">{c.name || "—"}</p>
                       {c.verifiedIndian ? (
                         <span className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-success">
@@ -231,6 +346,7 @@ export default function BniData() {
                         <span className="text-muted-foreground">—</span>
                       )}
                     </td>
+                    {isAdmin && !removedView && (
                     <td className="whitespace-nowrap px-2 py-2">
                       {emailStatus[c.id] ? (
                         <Link to={`/bni/emails?request=${encodeURIComponent(emailStatus[c.id].requestId)}`} className="inline-flex flex-col">
@@ -243,7 +359,28 @@ export default function BniData() {
                         <span className="text-muted-foreground">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-2 text-muted-foreground">{c.chapter || "—"}</td>
+                    )}
+                    <td className="px-2 py-2 text-muted-foreground">
+                      {removedView ? (
+                        <span className="text-xs">
+                          {c.removedAt ? new Date(c.removedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}
+                          {c.removedByName && <span className="block">by {c.removedByName}</span>}
+                        </span>
+                      ) : (
+                        c.chapter || "—"
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      {removedView ? (
+                        <button type="button" disabled={busy} onClick={() => restoreMembers([c])} className="rounded-md p-1.5 text-muted-foreground hover:bg-surface-muted hover:text-foreground" title="Restore to the directory" aria-label={`Restore ${c.name || "member"}`} data-testid={`bni-restore-${c.id}`}>
+                          <RotateCcw className="h-4 w-4" />
+                        </button>
+                      ) : (
+                        <button type="button" onClick={() => setConfirming([c])} className="rounded-md p-1.5 text-muted-foreground hover:bg-danger/10 hover:text-danger" title="Remove from the directory" aria-label={`Remove ${c.name || "member"}`} data-testid={`bni-remove-${c.id}`}>
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -264,6 +401,33 @@ export default function BniData() {
           </div>
         )}
       </Card>
+
+      <Modal open={Boolean(confirming)} onClose={() => !busy && setConfirming(null)} title={confirming?.length === 1 ? "Remove this member?" : `Remove ${confirming?.length ?? 0} members?`}>
+        {confirming && (
+          <div className="space-y-4 text-sm">
+            <ul className="max-h-40 space-y-1 overflow-y-auto rounded-xl bg-surface-muted p-3">
+              {confirming.slice(0, 20).map((c) => (
+                <li key={c.id} className="truncate">
+                  <span className="font-medium">{c.name || "Unnamed"}</span>
+                  {c.email && <span className="text-muted-foreground"> · {c.email}</span>}
+                </li>
+              ))}
+              {confirming.length > 20 && <li className="text-muted-foreground">and {confirming.length - 20} more</li>}
+            </ul>
+            <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
+              <li>They leave the BNI directory and every email audience.</li>
+              <li>Their email addresses go on the do-not-email list, so no future email reaches them.</li>
+              <li>{isAdmin ? "You can restore them from the Removed tab." : "Only an admin can bring them back."}</li>
+            </ul>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setConfirming(null)} disabled={busy}>Cancel</Button>
+              <Button variant="danger" onClick={removeMembers} disabled={busy} data-testid="bni-remove-confirm">
+                <Trash2 className="h-4 w-4" /> {busy ? "Removing…" : "Remove"}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

@@ -104,6 +104,30 @@ export function WorkReportersCard({ employee, canManage, isAdmin }) {
         </label>
       )}
 
+      {(isAdmin || employee.canManageBni) && employee.role !== "admin" && (
+        <label className="mt-4 flex items-start gap-2 border-t border-border pt-4 text-sm">
+          <input
+            type="checkbox"
+            checked={Boolean(employee.canManageBni)}
+            disabled={!isAdmin || pmBusy}
+            onChange={async (e) => {
+              setPmBusy(true);
+              try {
+                await data.setBniAccess(employee.id, e.target.checked);
+              } finally {
+                setPmBusy(false);
+              }
+            }}
+            className="mt-0.5 h-4 w-4 accent-primary"
+            data-testid="bni-access-toggle"
+          />
+          <span>
+            BNI directory — can view BNI members and remove them
+            <span className="block text-xs text-muted-foreground">No export, email sending or email reports; those stay with admins.</span>
+          </span>
+        </label>
+      )}
+
       {editing && (
         <div className="mt-4 space-y-2 border-t border-border pt-4">
           <p className="text-xs text-muted-foreground">Also report to:</p>

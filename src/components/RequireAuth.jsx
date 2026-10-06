@@ -37,6 +37,15 @@ export function RequireRole({ roles }) {
   return <Outlet />;
 }
 
+/** BNI directory — admins, plus anyone granted it on their profile. */
+export function RequireBniAccess() {
+  const { currentUser, authLoading } = useAuth();
+  if (authLoading) return <AuthLoadingScreen />;
+  if (!currentUser) return <Navigate to="/login" replace />;
+  if (currentUser.role !== "admin" && !currentUser.canManageBni) return <Navigate to="/" replace />;
+  return <Outlet />;
+}
+
 /** Project managers only — admins, plus anyone granted it on their profile. */
 export function RequireProjectManager() {
   const { currentUser, authLoading } = useAuth();

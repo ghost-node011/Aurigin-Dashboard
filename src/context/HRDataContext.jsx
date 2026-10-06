@@ -192,6 +192,12 @@ export function HRDataProvider({ children }) {
     setState((s) => ({ ...s, employees, leaveBalances: deriveLeaveBalances(employees) }));
   }
 
+  async function setBniAccess(employeeId, canManageBni) {
+    await api.setBniAccess(employeeId, canManageBni);
+    const employees = await api.getEmployees();
+    setState((s) => ({ ...s, employees, leaveBalances: deriveLeaveBalances(employees) }));
+  }
+
   async function setProbation(employeeId, employmentStatus, probationEndDate) {
     await api.setProbation(employeeId, employmentStatus, probationEndDate);
     const employees = await api.getEmployees();
@@ -289,6 +295,7 @@ export function HRDataProvider({ children }) {
         setProbation,
         setWorkReporters,
         setProjectManager,
+        setBniAccess,
         setPolicyExempt,
         claimEmergency,
         addKudos,
