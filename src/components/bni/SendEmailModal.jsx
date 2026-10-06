@@ -4,7 +4,8 @@ import { AlertTriangle, CheckCircle2, Send } from "lucide-react";
 import { api } from "../../lib/api";
 import { Modal } from "../Modal";
 import { Button } from "../Button";
-import { Select } from "../Input";
+import { Input, Select } from "../Input";
+import { useAuth } from "../../context/AuthContext";
 import { CATEGORY_LABEL } from "./emailStatus";
 
 const PREVIEW_NAME = "Meera Iyer";
@@ -30,6 +31,13 @@ export function SendEmailModal({ open, onClose, filters }) {
   const [notice, setNotice] = useState(null);
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
+  const { currentUser } = useAuth();
+  const [testEmails, setTestEmails] = useState("");
+
+  // Start the test box with your own email
+  useEffect(() => {
+    if (open) setTestEmails((v) => v || currentUser?.email || "");
+  }, [open, currentUser]);
 
   useEffect(() => {
     if (!open) return;
@@ -66,8 +74,8 @@ export function SendEmailModal({ open, onClose, filters }) {
     setError(null);
     setNotice(null);
     try {
-      await api.sendBniEmail({ templateId, test: true });
-      setNotice("Test email sent to your work email. It can take a minute to arrive.");
+      const r = await api.sendBniEmail({ templateId, test: true, testEmails });
+      setNotice(`Test sent to ${r.sentTo.join(", ")}. It can take a minute to arrive.`);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -177,15 +185,32 @@ export function SendEmailModal({ open, onClose, filters }) {
           {notice && <p className="text-sm text-success">{notice}</p>}
           {error && <p className="text-sm text-danger">{error}</p>}
 
+          <div>
+            <label htmlFor="bni-test-emails" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Send a test to
+            </label>
+            <div className="mt-1 flex flex-wrap gap-2">
+              <Input
+                id="bni-test-emails"
+                type="text"
+                value={testEmails}
+                onChange={(e) => setTestEmails(e.target.value)}
+                placeholder="you@example.com, colleague@example.com"
+                className="min-w-0 flex-1"
+              />
+              <Button variant="outline" onClick={sendTest} disabled={!templateId || !testEmails.trim() || busy !== null}>
+                {busy === "test" ? "Sending test…" : "Send test"}
+              </Button>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">Up to 5 addresses, separated by commas. Tests never count as "already received".</p>
+          </div>
+
           <label className="flex items-start gap-2 text-sm">
             <input type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)} className="mt-0.5" />
             <span>I've checked the preview and the test email. Members who already received this template, unsubscribed or bounced are skipped automatically.</span>
           </label>
 
           <div className="flex flex-wrap justify-end gap-2">
-            <Button variant="outline" onClick={sendTest} disabled={!templateId || busy !== null}>
-              {busy === "test" ? "Sending test…" : "Send test to me"}
-            </Button>
             <Button onClick={sendAll} disabled={!templateId || !audience?.total || !checked || busy !== null}>
               <Send className="h-4 w-4" />
               {busy === "send"
