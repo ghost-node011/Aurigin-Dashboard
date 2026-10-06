@@ -136,6 +136,7 @@ export const api = {
   getBniEmailLog: (id) => request(`/bni/comms/logs/${encodeURIComponent(id)}`),
   getBniEmailStatus: (ids) => post("/bni/comms/status", { ids }),
   stopEmailing: (email) => post("/bni/comms/suppressions", { email }),
+  bniFollowUp: (requestId, body) => post(`/bni/comms/requests/${encodeURIComponent(requestId)}/follow-up`, body),
 
   getBeebarkWaitlist: (query) => request(`/beebark/waitlist?${new URLSearchParams(clean(query))}`),
   downloadBeebarkCsv: async (query) => {

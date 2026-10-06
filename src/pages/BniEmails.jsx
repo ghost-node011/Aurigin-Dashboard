@@ -9,6 +9,7 @@ import { Input } from "../components/Input";
 import { Modal } from "../components/Modal";
 import { cn } from "../lib/cn";
 import { CATEGORY_LABEL, EMAIL_STATUS, REQUEST_STATUS, formatDateTime } from "../components/bni/emailStatus";
+import { FollowUpModal } from "../components/bni/FollowUpModal";
 
 const LOG_TABS = [
   { key: "", label: "All" },
@@ -146,6 +147,7 @@ function RequestDetail({ requestId, onBack }) {
   const [openLog, setOpenLog] = useState(null);
   const [error, setError] = useState(null);
   const [cancelling, setCancelling] = useState(false);
+  const [followingUp, setFollowingUp] = useState(false);
 
   const load = useCallback(() => {
     api.getBniEmailRequest(requestId).then(setRequest, (err) => setError(err.message));
@@ -212,6 +214,11 @@ function RequestDetail({ requestId, onBack }) {
         {request && (
           <div className="flex items-center gap-2">
             <Badge tone={REQUEST_STATUS[request.status]?.tone}>{REQUEST_STATUS[request.status]?.label}</Badge>
+            {request.status === "completed" && request.stats.delivered + request.stats.sent > 0 && (
+              <Button size="sm" onClick={() => setFollowingUp(true)}>
+                Send follow-up
+              </Button>
+            )}
             {(request.status === "sending" || request.status === "queued") && (
               <Button variant="danger" size="sm" onClick={cancel} disabled={cancelling}>
                 {cancelling ? "Stopping…" : "Stop sending"}
@@ -339,6 +346,7 @@ function RequestDetail({ requestId, onBack }) {
       )}
 
       <LogTimeline id={openLog} onClose={() => setOpenLog(null)} />
+      <FollowUpModal open={followingUp} onClose={() => setFollowingUp(false)} request={request} />
     </div>
   );
 }
