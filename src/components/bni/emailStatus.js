@@ -1,6 +1,7 @@
 // Shared labels and badge tones for BNI email statuses
 export const EMAIL_STATUS = {
   queued: { label: "Queued", tone: "neutral" },
+  sending: { label: "Sending", tone: "info" },
   sent: { label: "Sent", tone: "info" },
   delivered: { label: "Delivered", tone: "success" },
   bounced: { label: "Bounced", tone: "danger" },

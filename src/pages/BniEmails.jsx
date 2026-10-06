@@ -284,7 +284,8 @@ function RequestDetail({ requestId, onBack }) {
                   <th className="px-2 py-2 font-medium">Status</th>
                   <th className="px-2 py-2 font-medium">Sent</th>
                   <th className="px-2 py-2 font-medium">Opened</th>
-                  <th className="px-4 py-2 font-medium">Clicked</th>
+                  <th className="px-2 py-2 font-medium">Clicked</th>
+                  <th className="px-4 py-2 text-right font-medium">Stop</th>
                 </tr>
               </thead>
               <tbody>
@@ -309,7 +310,7 @@ function RequestDetail({ requestId, onBack }) {
                         <span className="text-muted-foreground">—</span>
                       )}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-2">
+                    <td className="whitespace-nowrap px-2 py-2">
                       {l.clickCount > 0 ? (
                         <>
                           {formatDateTime(l.clickedAt)} <span className="text-xs text-muted-foreground">×{l.clickCount}</span>
@@ -317,6 +318,9 @@ function RequestDetail({ requestId, onBack }) {
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-2 text-right" onClick={(e) => e.stopPropagation()}>
+                      <StopButton log={l} onDone={load} />
                     </td>
                   </tr>
                 ))}
@@ -347,6 +351,45 @@ function RequestDetail({ requestId, onBack }) {
 
       <LogTimeline id={openLog} onClose={() => setOpenLog(null)} />
       <FollowUpModal open={followingUp} onClose={() => setFollowingUp(false)} request={request} />
+    </div>
+  );
+}
+
+/**
+ * Per person: "Stop" cancels an email that hasn't gone out yet; after it's
+ * sent, "Stop future emails" keeps them out of follow-ups and later sends.
+ */
+function StopButton({ log, onDone }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const [stopped, setStopped] = useState(false);
+  const notSentYet = log.status === "queued";
+
+  if (log.unsubscribedAt || stopped) return <span className="text-xs text-muted-foreground">Stopped</span>;
+  if (log.status === "cancelled") return <span className="text-xs text-muted-foreground">Not sent</span>;
+  if (["bounced", "complained"].includes(log.status)) return <span className="text-xs text-muted-foreground">Blocked</span>;
+
+  async function stop() {
+    setBusy(true);
+    setError(null);
+    try {
+      if (notSentYet) await api.stopOneEmail(log._id);
+      else await api.stopEmailing(log.to);
+      setStopped(true);
+      onDone?.();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="inline-flex flex-col items-end">
+      <Button size="sm" variant="outline" onClick={stop} disabled={busy || log.status === "sending"}>
+        {busy ? "Stopping…" : notSentYet ? "Stop" : "Stop future emails"}
+      </Button>
+      {error && <span className="mt-0.5 max-w-[12rem] text-[11px] text-danger">{error}</span>}
     </div>
   );
 }
