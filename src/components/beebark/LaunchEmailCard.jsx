@@ -131,7 +131,7 @@ export function LaunchEmailCard() {
               </span>
             </p>
           )}
-          <p className="mt-1 text-xs text-muted-foreground">Both versions count as one email: each person gets only one of them, once.</p>
+          <p className="mt-1 text-xs text-muted-foreground">All versions count as one email: each person gets only one of them, once.</p>
           {a && (
             <p className="mt-3 text-sm" data-testid="launch-audience">
               <span className="font-display text-2xl tabular-nums">{a.queued}</span>{" "}
@@ -185,7 +185,7 @@ export function LaunchEmailCard() {
               <li key={r.requestId} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border px-3 py-2 text-sm">
                 <span>
                   {formatDate(new Date(r.createdAt), { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })} ·{" "}
-                  {r.templateId === "launch-announcement-letter" ? "from Arjun" : "from no-reply"} · by {r.createdBy || "—"} ·{" "}
+                  {data.templates?.find((t) => t.templateId === r.templateId)?.name.replace(/^Launch · /, "") ?? r.templateId} · by {r.createdBy || "—"} ·{" "}
                   <span className="capitalize">{r.status}</span>
                 </span>
                 <span className="flex flex-wrap items-center gap-3 tabular-nums text-muted-foreground">
