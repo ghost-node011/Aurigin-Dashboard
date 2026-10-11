@@ -5,7 +5,7 @@ import { useAuth } from "../../context/AuthContext";
 import { formatDate } from "../../lib/date";
 import { Card } from "../Card";
 import { Button } from "../Button";
-import { Input } from "../Input";
+import { Input, Select } from "../Input";
 import { Modal } from "../Modal";
 
 /**
@@ -24,6 +24,7 @@ export function LaunchEmailCard() {
   const [testEmails, setTestEmails] = useState("");
   const [confirming, setConfirming] = useState(false);
   const [typed, setTyped] = useState("");
+  const [templateId, setTemplateId] = useState("launch-announcement-letter");
 
   const load = () =>
     api.getBeebarkLaunch().then(
@@ -53,7 +54,7 @@ export function LaunchEmailCard() {
   async function openPreview() {
     setError(null);
     try {
-      setPreview(await api.previewBeebarkLaunch());
+      setPreview(await api.previewBeebarkLaunch(templateId));
     } catch (err) {
       setError(err.message);
     }
@@ -64,7 +65,7 @@ export function LaunchEmailCard() {
     setError(null);
     setNotice(null);
     try {
-      const r = await api.testBeebarkLaunch(testEmails);
+      const r = await api.testBeebarkLaunch(templateId, testEmails);
       setNotice(`Test sent to ${r.sentTo.join(", ")}.`);
       load();
     } catch (err) {
@@ -78,7 +79,7 @@ export function LaunchEmailCard() {
     setBusy("send");
     setError(null);
     try {
-      const r = await api.sendBeebarkLaunch(data.audience.queued);
+      const r = await api.sendBeebarkLaunch(templateId, data.audience.queued);
       setConfirming(false);
       setTyped("");
       setNotice(`Sending to ${r.queued} ${r.queued === 1 ? "person" : "people"}. Delivery stats appear below.`);
@@ -104,6 +105,7 @@ export function LaunchEmailCard() {
   }
 
   const a = data?.audience;
+  const chosen = data?.templates?.find((t) => t.templateId === templateId);
   const real = (data?.requests ?? []).filter((r) => !r.test);
   const tests = (data?.requests ?? []).filter((r) => r.test);
 
@@ -111,12 +113,25 @@ export function LaunchEmailCard() {
     <Card title="Launch email">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
-          <p className="flex items-center gap-2 font-medium">
-            <Rocket className="h-4 w-4 text-primary" /> {data?.template.subject ?? "Today, BeeBark opens its doors"}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            From BeeBark &lt;no-reply@thebeebark.com&gt; · links to thebeebark.com/register · each person gets it once
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Rocket className="h-4 w-4 text-primary" />
+            <Select value={templateId} onChange={(e) => setTemplateId(e.target.value)} className="h-9 w-auto" aria-label="Version" data-testid="launch-version">
+              {(data?.templates ?? []).map((t) => (
+                <option key={t.templateId} value={t.templateId}>
+                  {t.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+          {chosen && (
+            <p className="mt-2 text-sm">
+              <span className="font-medium">{chosen.subject}</span>
+              <span className="block text-xs text-muted-foreground">
+                From {chosen.from} · {chosen.tracking ? "open and click stats" : "no tracking (delivery stats only), more likely to reach Primary"} · links to thebeebark.com/register
+              </span>
+            </p>
+          )}
+          <p className="mt-1 text-xs text-muted-foreground">Both versions count as one email: each person gets only one of them, once.</p>
           {a && (
             <p className="mt-3 text-sm" data-testid="launch-audience">
               <span className="font-display text-2xl tabular-nums">{a.queued}</span>{" "}
@@ -169,7 +184,8 @@ export function LaunchEmailCard() {
             {real.map((r) => (
               <li key={r.requestId} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border px-3 py-2 text-sm">
                 <span>
-                  {formatDate(new Date(r.createdAt), { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })} · by {r.createdBy || "—"} ·{" "}
+                  {formatDate(new Date(r.createdAt), { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })} ·{" "}
+                  {r.templateId === "launch-announcement-letter" ? "from Arjun" : "from no-reply"} · by {r.createdBy || "—"} ·{" "}
                   <span className="capitalize">{r.status}</span>
                 </span>
                 <span className="flex flex-wrap items-center gap-3 tabular-nums text-muted-foreground">
@@ -197,7 +213,7 @@ export function LaunchEmailCard() {
 
       <Modal open={confirming} onClose={() => !busy && setConfirming(false)} title="Send the launch email?">
         <p className="text-sm">
-          This emails <b>{a?.queued}</b> {a?.queued === 1 ? "person" : "people"} on BeeBark's waitlist now. It can't be unsent, though you can stop it while it's still going out.
+          This emails <b>{a?.queued}</b> {a?.queued === 1 ? "person" : "people"} on BeeBark's waitlist now, as <b>{chosen?.name}</b>. It can't be unsent, though you can stop it while it's still going out.
         </p>
         <label className="mt-4 block text-sm">
           Type <b>{a?.queued}</b> to confirm

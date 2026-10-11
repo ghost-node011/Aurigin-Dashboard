@@ -144,9 +144,9 @@ export const api = {
   bniFollowUp: (requestId, body) => post(`/bni/comms/requests/${encodeURIComponent(requestId)}/follow-up`, body),
 
   getBeebarkLaunch: () => request("/beebark/launch"),
-  previewBeebarkLaunch: () => post("/beebark/launch/preview", {}),
-  testBeebarkLaunch: (testEmails) => post("/beebark/launch/test", { testEmails }),
-  sendBeebarkLaunch: (confirmCount) => post("/beebark/launch/send", { confirmCount }),
+  previewBeebarkLaunch: (templateId) => post("/beebark/launch/preview", { templateId }),
+  testBeebarkLaunch: (templateId, testEmails) => post("/beebark/launch/test", { templateId, testEmails }),
+  sendBeebarkLaunch: (templateId, confirmCount) => post("/beebark/launch/send", { templateId, confirmCount }),
   cancelBeebarkLaunch: (requestId) => post(`/beebark/launch/requests/${encodeURIComponent(requestId)}/cancel`, {}),
   getBeebarkWaitlist: (query) => request(`/beebark/waitlist?${new URLSearchParams(clean(query))}`),
   downloadBeebarkCsv: async (query) => {
