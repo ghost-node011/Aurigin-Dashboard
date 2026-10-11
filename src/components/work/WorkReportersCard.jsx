@@ -104,6 +104,30 @@ export function WorkReportersCard({ employee, canManage, isAdmin }) {
         </label>
       )}
 
+      {isAdmin && employee.role === "admin" && (
+        <label className="mt-4 flex items-start gap-2 border-t border-border pt-4 text-sm">
+          <input
+            type="checkbox"
+            checked={Boolean(employee.canSendBeebarkEmail)}
+            disabled={pmBusy}
+            onChange={async (e) => {
+              setPmBusy(true);
+              try {
+                await data.setBeebarkEmailAccess(employee.id, e.target.checked);
+              } finally {
+                setPmBusy(false);
+              }
+            }}
+            className="mt-0.5 h-4 w-4 accent-primary"
+            data-testid="beebark-email-toggle"
+          />
+          <span>
+            BeeBark launch email — can send it to BeeBark's waitlist
+            <span className="block text-xs text-muted-foreground">Previews and tests are open to all admins; only people with this can send it for real.</span>
+          </span>
+        </label>
+      )}
+
       {(isAdmin || employee.canManageBni) && employee.role !== "admin" && (
         <label className="mt-4 flex items-start gap-2 border-t border-border pt-4 text-sm">
           <input

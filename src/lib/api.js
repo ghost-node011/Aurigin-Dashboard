@@ -41,6 +41,7 @@ export const api = {
     patch(`/employees/${employeeId}/work-reporters`, { workReporterIds }),
   setPolicyExempt: (employeeId, policyExempt) => patch(`/employees/${employeeId}/policy-exempt`, { policyExempt }),
   setBniAccess: (employeeId, canManageBni) => patch(`/employees/${employeeId}/bni-access`, { canManageBni }),
+  setBeebarkEmailAccess: (employeeId, canSendBeebarkEmail) => patch(`/employees/${employeeId}/beebark-email-access`, { canSendBeebarkEmail }),
   setProjectManager: (employeeId, canManageProjects) =>
     patch(`/employees/${employeeId}/project-manager`, { canManageProjects }),
   completeOnboarding: (employeeId) => patch(`/employees/${employeeId}/complete-onboarding`, {}),
@@ -142,6 +143,11 @@ export const api = {
   stopOneEmail: (logId) => post(`/bni/comms/logs/${encodeURIComponent(logId)}/cancel`, {}),
   bniFollowUp: (requestId, body) => post(`/bni/comms/requests/${encodeURIComponent(requestId)}/follow-up`, body),
 
+  getBeebarkLaunch: () => request("/beebark/launch"),
+  previewBeebarkLaunch: () => post("/beebark/launch/preview", {}),
+  testBeebarkLaunch: (testEmails) => post("/beebark/launch/test", { testEmails }),
+  sendBeebarkLaunch: (confirmCount) => post("/beebark/launch/send", { confirmCount }),
+  cancelBeebarkLaunch: (requestId) => post(`/beebark/launch/requests/${encodeURIComponent(requestId)}/cancel`, {}),
   getBeebarkWaitlist: (query) => request(`/beebark/waitlist?${new URLSearchParams(clean(query))}`),
   downloadBeebarkCsv: async (query) => {
     const res = await fetch(`${API_URL}/beebark/waitlist/export?${new URLSearchParams(clean(query))}`, {

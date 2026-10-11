@@ -6,6 +6,7 @@ import { Card } from "../components/Card";
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
 import { Input, Select } from "../components/Input";
+import { LaunchEmailCard } from "../components/beebark/LaunchEmailCard";
 
 /**
  * BeeBark's pre-launch waitlist (admins only), read live from BeeBark's
@@ -76,6 +77,8 @@ export default function BeebarkWaitlist() {
       </div>
 
       {error && <p className="rounded-lg bg-danger/5 px-3 py-2 text-sm text-danger">{error}</p>}
+
+      <LaunchEmailCard />
 
       {stats && (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,2fr)]">
