@@ -146,7 +146,7 @@ export const api = {
   getBeebarkLaunch: () => request("/beebark/launch"),
   previewBeebarkLaunch: (templateId) => post("/beebark/launch/preview", { templateId }),
   testBeebarkLaunch: (templateId, testEmails) => post("/beebark/launch/test", { templateId, testEmails }),
-  sendBeebarkLaunch: (templateId, confirmCount) => post("/beebark/launch/send", { templateId, confirmCount }),
+  sendBeebarkLaunch: (templateId, confirmCount, resend = false) => post("/beebark/launch/send", { templateId, confirmCount, resend }),
   cancelBeebarkLaunch: (requestId) => post(`/beebark/launch/requests/${encodeURIComponent(requestId)}/cancel`, {}),
   getBeebarkWaitlist: (query) => request(`/beebark/waitlist?${new URLSearchParams(clean(query))}`),
   downloadBeebarkCsv: async (query) => {

@@ -11,7 +11,7 @@ import { Modal } from "../Modal";
 /**
  * BeeBark's launch email to its waitlist. BeeBark picks the audience (the
  * waitlist minus region sign-ups and people who already have an account) and
- * never emails anyone this template twice. Admins can preview and send tests;
+ * never emails anyone this template twice, unless "Send again" is ticked. Admins can preview and send tests;
  * only people given "BeeBark launch email" permission can send it for real.
  */
 export function LaunchEmailCard() {
@@ -25,6 +25,7 @@ export function LaunchEmailCard() {
   const [confirming, setConfirming] = useState(false);
   const [typed, setTyped] = useState("");
   const [templateId, setTemplateId] = useState("launch-announcement-letter");
+  const [resend, setResend] = useState(false);
 
   const load = () =>
     api.getBeebarkLaunch().then(
@@ -79,9 +80,10 @@ export function LaunchEmailCard() {
     setBusy("send");
     setError(null);
     try {
-      const r = await api.sendBeebarkLaunch(templateId, data.audience.queued);
+      const r = await api.sendBeebarkLaunch(templateId, a.queued, resend);
       setConfirming(false);
       setTyped("");
+      setResend(false);
       setNotice(`Sending to ${r.queued} ${r.queued === 1 ? "person" : "people"}. Delivery stats appear below.`);
       load();
     } catch (err) {
@@ -104,7 +106,7 @@ export function LaunchEmailCard() {
     }
   }
 
-  const a = data?.audience;
+  const a = resend ? data?.resendAudience : data?.audience;
   const chosen = data?.templates?.find((t) => t.templateId === templateId);
   const real = (data?.requests ?? []).filter((r) => !r.test);
   const tests = (data?.requests ?? []).filter((r) => r.test);
@@ -131,14 +133,22 @@ export function LaunchEmailCard() {
               </span>
             </p>
           )}
-          <p className="mt-1 text-xs text-muted-foreground">All versions count as one email: each person gets only one of them, once.</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {resend ? "Sending again: people who already got a launch email get this one too." : "All versions count as one email: each person gets only one of them, once."}
+          </p>
+          {data?.canSend && (
+            <label className="mt-2 flex items-center gap-2 text-sm" data-testid="launch-resend">
+              <input type="checkbox" checked={resend} onChange={(e) => setResend(e.target.checked)} className="h-4 w-4 accent-primary" />
+              Send again to people who already received it
+            </label>
+          )}
           {a && (
             <p className="mt-3 text-sm" data-testid="launch-audience">
               <span className="font-display text-2xl tabular-nums">{a.queued}</span>{" "}
               {a.queued === 1 ? "person" : "people"} will receive it
               <span className="block text-xs text-muted-foreground">
                 Of {a.waitlist} on the waitlist, skipped: {a.excluded.hasAccount} already have an account · {a.excluded.region} waiting for their region
-                (Kerala, Tamil Nadu) · {a.skipped.suppressed} unsubscribed · {a.skipped.duplicate} already received it
+                (Kerala, Tamil Nadu) · {a.skipped.suppressed} unsubscribed{resend ? "" : ` · ${a.skipped.duplicate} already received it`}
                 {a.skipped.invalid ? ` · ${a.skipped.invalid} invalid email` : ""}
               </span>
             </p>
@@ -213,7 +223,8 @@ export function LaunchEmailCard() {
 
       <Modal open={confirming} onClose={() => !busy && setConfirming(false)} title="Send the launch email?">
         <p className="text-sm">
-          This emails <b>{a?.queued}</b> {a?.queued === 1 ? "person" : "people"} on BeeBark's waitlist now, as <b>{chosen?.name}</b>. It can't be unsent, though you can stop it while it's still going out.
+          This emails <b>{a?.queued}</b> {a?.queued === 1 ? "person" : "people"} on BeeBark's waitlist now, as <b>{chosen?.name}</b>
+          {resend ? ", including people who already received a launch email" : ""}. It can't be unsent, though you can stop it while it's still going out.
         </p>
         <label className="mt-4 block text-sm">
           Type <b>{a?.queued}</b> to confirm
